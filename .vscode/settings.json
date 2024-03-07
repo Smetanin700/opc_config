@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "server_config_default.h": "c",
+    "server.h": "c"
+  }
+}
