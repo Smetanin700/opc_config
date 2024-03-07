@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/server_nodeset.dir/server_nodeset.c.o CMakeFiles/server_nodeset.dir/__/src_generated/open62541/namespace_example_generated.c.o -o ../bin/examples/server_nodeset  /usr/local/lib/libopen62541.a -lm -lrt 

@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/server_loglevel.dir/server_loglevel.c.o -o bin/examples/server_loglevel  /usr/local/lib/libopen62541.a -lm -lrt 

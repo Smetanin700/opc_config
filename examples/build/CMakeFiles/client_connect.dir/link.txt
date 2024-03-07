@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/client_connect.dir/client_connect.c.o -o bin/examples/client_connect  /usr/local/lib/libopen62541.a -lm -lrt 

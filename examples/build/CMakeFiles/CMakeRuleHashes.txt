@@ -1,0 +1,5 @@
+# Hashes of file build rules.
+4ae4885492f024899f7b69d17366dfc8 nodeset/CMakeFiles/open62541-generator-ids_example
+4ae4885492f024899f7b69d17366dfc8 nodeset/CMakeFiles/open62541-generator-ns-example
+d9e0cca19b4978576d80c486be9c3e12 src_generated/open62541/example_nodeids.h
+26c28f56470fb1d6806cae161aa77e29 src_generated/open62541/namespace_example_generated.c

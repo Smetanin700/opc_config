@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/server_ctt.dir/server_ctt.c.o -o bin/examples/server_ctt  /usr/local/lib/libopen62541.a -lm -lrt 

@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/client_async.dir/client_async.c.o -o bin/examples/client_async  /usr/local/lib/libopen62541.a -lm -lrt 
