@@ -1,13 +1,6 @@
 {
-  "Node":[{
-    "type": "int32",
-    "name": "numeric var",
-    "value": 123
-  },
-  {
-    "type": "string",
-    "name": "test string",
-    "value": "test test test"
-  }
-]
+  "settings":[{
+    "ip":"192.168.1.142",
+    "port":4840
+  }]
 }

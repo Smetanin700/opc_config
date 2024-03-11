@@ -1,6 +1,20 @@
 {
   "files.associations": {
     "server_config_default.h": "c",
-    "server.h": "c"
+    "server.h": "c",
+    "any": "cpp",
+    "array": "cpp",
+    "charconv": "cpp",
+    "chrono": "cpp",
+    "compare": "cpp",
+    "functional": "cpp",
+    "ratio": "cpp",
+    "tuple": "cpp",
+    "type_traits": "cpp",
+    "utility": "cpp",
+    "variant": "cpp",
+    "istream": "cpp",
+    "ostream": "cpp",
+    "ranges": "cpp"
   }
 }
