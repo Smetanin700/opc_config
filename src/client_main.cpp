@@ -18,28 +18,20 @@ static void stopHandler(int sign) {
     running = 0;
 }
 
-void printUAString(UA_String str) {
-    printf("UA_String data: ");
-    for(size_t i = 0; i < str.length; ++i) {
-        printf("%c", str.data[i]);
-    }
-    printf("\n");
-}
-
 int main() {    
+    signal(SIGINT, stopHandler);
+
     std::ifstream f("../configs/client_test.json");
+    std::string opc = "opc.tcp://";
+
     json data = json::parse(f);
     json object = data["settings"];
     std::string address = object[0]["ip"];   
     int port = object[0]["port"];   
 
-    std::string opc = "opc.tcp://";
-
     opc += address;
     opc += ":";
-    opc += std::to_string(port);    
-
-    signal(SIGINT, stopHandler);
+    opc += std::to_string(port);
 
     UA_Client *client = UA_Client_new();
     UA_ClientConfig *cc = UA_Client_getConfig(client);
@@ -89,18 +81,24 @@ int main() {
                 UA_ReadResponse readResponse = UA_Client_Service_read(client, readRequest);
 
                 if(readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue) {
+                    json data_value;
                     UA_Variant value = readResponse.results[0].value;
+                    char* name = (char*)UA_malloc(sizeof(char)*ref->displayName.text.length+1);
+                    memccpy(name, ref->displayName.text.data, 0, ref->displayName.text.length);
+                    data_value["name"] = name;                    
+
                     // Обработка значения переменной
-                    printf("Узел: %.*s, Значение: ", (int)ref->displayName.text.length, ref->displayName.text.data);
+                    //printf("Узел: %.*s, Значение: ", (int)ref->displayName.text.length, ref->displayName.text.data);
                     if(value.type == &UA_TYPES[UA_TYPES_INT32]){
                         UA_Int32 raw_date = *(UA_Int32 *) value.data;
-                        printf("int %u", raw_date);
+                        data_value["value"] = raw_date;
                     }
                     if(value.type == &UA_TYPES[UA_TYPES_DOUBLE]){
                         UA_Double raw_date = *(UA_Double *) value.data;
-                        printf("double %le", raw_date);
+                        data_value["value"] = raw_date;
                     }
-                    printf("\n");
+                    std::string s = data_value.dump();
+                    std::cout << s << std::endl;
                 }
 
                 UA_ReadRequest_deleteMembers(&readRequest);
