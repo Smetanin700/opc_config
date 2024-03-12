@@ -14,11 +14,13 @@ using json = nlohmann::json;
 
 UA_Boolean running = true;
 
-static void stopHandler(int sign) {
+static void stopHandler(int sign)
+{
     running = 0;
 }
 
-int main() {    
+int main()
+{
     signal(SIGINT, stopHandler);
 
     std::ifstream f("../configs/client_test.json");
@@ -26,8 +28,8 @@ int main() {
 
     json data = json::parse(f);
     json object = data["settings"];
-    std::string address = object[0]["ip"];   
-    int port = object[0]["port"];   
+    std::string address = object[0]["ip"];
+    int port = object[0]["port"];
 
     opc += address;
     opc += ":";
@@ -43,12 +45,15 @@ int main() {
     UA_Variant value;
     UA_Variant_init(&value);
 
-    while(running) {
+    while (running)
+    {
         retval = UA_Client_connect(client, opc.c_str());
-        if(retval == UA_STATUSCODE_BADCONNECTIONCLOSED) {
+        if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
+        {
             continue;
         }
-        if(retval != UA_STATUSCODE_GOOD) {
+        if (retval != UA_STATUSCODE_GOOD)
+        {
             UA_sleep_ms(1000);
             continue;
         }
@@ -58,15 +63,18 @@ int main() {
         request.nodesToBrowse = UA_BrowseDescription_new();
         request.nodesToBrowseSize = 1;
         request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); // Идентификатор корневой папки объектов сервера
-        request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL; // Запрашиваем все возможные результаты
+        request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;                  // Запрашиваем все возможные результаты
 
         UA_BrowseResponse response = UA_Client_Service_browse(client, request);
 
         // Обработка ответа и чтение значений переменных
-        for(size_t i = 0; i < response.resultsSize; ++i) {
-            for(size_t j = 0; j < response.results[i].referencesSize; ++j) {
+        for (size_t i = 0; i < response.resultsSize; ++i)
+        {
+            for (size_t j = 0; j < response.results[i].referencesSize; ++j)
+            {
                 UA_ReferenceDescription *ref = &(response.results[i].references[j]);
-                if(ref->nodeClass != UA_NODECLASS_VARIABLE) {
+                if (ref->nodeClass != UA_NODECLASS_VARIABLE)
+                {
                     continue; // Пропускаем узлы, которые не являются переменными
                 }
 
@@ -80,29 +88,29 @@ int main() {
 
                 UA_ReadResponse readResponse = UA_Client_Service_read(client, readRequest);
 
-                if(readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue) {
+                if (readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue)
+                {
                     json data_value;
                     UA_Variant value = readResponse.results[0].value;
-                    char* name = (char*)UA_malloc(sizeof(char)*ref->displayName.text.length+1);
+                    char *name = (char *)UA_malloc(sizeof(char) * ref->displayName.text.length + 1);
                     memccpy(name, ref->displayName.text.data, 0, ref->displayName.text.length);
-                    data_value["name"] = name;                    
+                    data_value["name"] = name;
 
                     // Обработка значения переменной
-                    //printf("Узел: %.*s, Значение: ", (int)ref->displayName.text.length, ref->displayName.text.data);
-                    if(value.type == &UA_TYPES[UA_TYPES_INT32]){
-                        UA_Int32 raw_date = *(UA_Int32 *) value.data;
+                    // printf("Узел: %.*s, Значение: ", (int)ref->displayName.text.length, ref->displayName.text.data);
+                    if (value.type == &UA_TYPES[UA_TYPES_INT32])
+                    {
+                        UA_Int32 raw_date = *(UA_Int32 *)value.data;
                         data_value["value"] = raw_date;
                     }
-                    if(value.type == &UA_TYPES[UA_TYPES_DOUBLE]){
-                        UA_Double raw_date = *(UA_Double *) value.data;
+                    if (value.type == &UA_TYPES[UA_TYPES_DOUBLE])
+                    {
+                        UA_Double raw_date = *(UA_Double *)value.data;
                         data_value["value"] = raw_date;
                     }
                     std::string s = data_value.dump();
                     std::cout << s << std::endl;
                 }
-
-                UA_ReadRequest_deleteMembers(&readRequest);
-                UA_ReadResponse_deleteMembers(&readResponse);
             }
         }
         UA_sleep_ms(1000);
