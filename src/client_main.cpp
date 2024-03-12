@@ -27,7 +27,7 @@ void printUAString(UA_String str) {
 }
 
 int main() {    
-    std::ifstream f("../server1.json");
+    std::ifstream f("../configs/client_test.json");
     json data = json::parse(f);
     json object = data["settings"];
     std::string address = object[0]["ip"];   
@@ -89,10 +89,17 @@ int main() {
                 UA_ReadResponse readResponse = UA_Client_Service_read(client, readRequest);
 
                 if(readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue) {
-                    UA_Variant *value = &readResponse.results[0].value;
+                    UA_Variant value = readResponse.results[0].value;
                     // Обработка значения переменной
                     printf("Узел: %.*s, Значение: ", (int)ref->displayName.text.length, ref->displayName.text.data);
-                    UA_Variant_print(value);
+                    if(value.type == &UA_TYPES[UA_TYPES_INT32]){
+                        UA_Int32 raw_date = *(UA_Int32 *) value.data;
+                        printf("int %u", raw_date);
+                    }
+                    if(value.type == &UA_TYPES[UA_TYPES_DOUBLE]){
+                        UA_Double raw_date = *(UA_Double *) value.data;
+                        printf("double %le", raw_date);
+                    }
                     printf("\n");
                 }
 

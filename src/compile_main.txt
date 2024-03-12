@@ -1,0 +1,2 @@
+g++ -std=c99 server_main.cpp -lopen62541 -o server
+g++ -std=c99 client_main.cpp -lopen62541 -o client

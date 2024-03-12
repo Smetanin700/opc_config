@@ -1,1 +1,0 @@
-gcc -std=c99 main.cpp -lopen62541 -o server
