@@ -19,10 +19,8 @@ static void stopHandler(int sign)
     running = 0;
 }
 
-int main()
+std::string ReadConfig() // Считываем файл конфигурации
 {
-    signal(SIGINT, stopHandler);
-
     std::ifstream f("../configs/client_test.json");
     std::string opc = "opc.tcp://";
 
@@ -34,9 +32,16 @@ int main()
     opc += address;
     opc += ":";
     opc += std::to_string(port);
+    return opc;
+}
+
+int main()
+{
+    signal(SIGINT, stopHandler);
+    std::string opc = ReadConfig();
 
     UA_Client *client = UA_Client_new();
-    UA_ClientConfig *cc = UA_Client_getConfig(client);
+    UA_ClientConfig *cc = UA_Client_getConfig(client); // Создание клиента
     UA_ClientConfig_setDefault(cc);
 
     cc->timeout = 1000;
@@ -44,9 +49,10 @@ int main()
     UA_StatusCode retval;
     UA_Variant value;
     UA_Variant_init(&value);
+    bool one = true;
 
     while (running)
-    {
+    {        
         retval = UA_Client_connect(client, opc.c_str());
         if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
         {
@@ -57,16 +63,32 @@ int main()
             UA_sleep_ms(1000);
             continue;
         }
-
         UA_BrowseRequest request;
         UA_BrowseRequest_init(&request);
         request.nodesToBrowse = UA_BrowseDescription_new();
         request.nodesToBrowseSize = 1;
         request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); // Идентификатор корневой папки объектов сервера
         request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;                  // Запрашиваем все возможные результаты
-
         UA_BrowseResponse response = UA_Client_Service_browse(client, request);
 
+        if(one){
+            one = false;
+        UA_Int32 myVariableValue = 42;
+        UA_VariableAttributes myVariableAttributes = UA_VariableAttributes_default;
+        myVariableAttributes.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+        myVariableAttributes.displayName = UA_LOCALIZEDTEXT("en-US", "My Variable");
+        myVariableAttributes.dataType = UA_TYPES[UA_TYPES_INT32].typeId;
+        myVariableAttributes.valueRank = -1;
+
+        UA_NodeId variableNodeId = UA_NODEID_NULL;
+        UA_StatusCode retval = UA_Client_addVariableNode(client, variableNodeId,
+                                                    UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+                                                    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                                                    UA_QUALIFIEDNAME(1, "my_variable"),
+                                                    UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+                                                    myVariableAttributes, &variableNodeId);
+                                                    
+        }
         // Обработка ответа и чтение значений переменных
         for (size_t i = 0; i < response.resultsSize; ++i)
         {
@@ -79,13 +101,13 @@ int main()
                 }
 
                 UA_NodeId nodeId = ref->nodeId.nodeId;
+
                 UA_ReadRequest readRequest;
                 UA_ReadRequest_init(&readRequest);
                 readRequest.nodesToRead = UA_ReadValueId_new();
                 readRequest.nodesToReadSize = 1;
                 readRequest.nodesToRead[0].nodeId = nodeId;
                 readRequest.nodesToRead[0].attributeId = UA_ATTRIBUTEID_VALUE;
-
                 UA_ReadResponse readResponse = UA_Client_Service_read(client, readRequest);
 
                 if (readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue)
@@ -97,11 +119,15 @@ int main()
                     data_value["name"] = name;
 
                     // Обработка значения переменной
-                    // printf("Узел: %.*s, Значение: ", (int)ref->displayName.text.length, ref->displayName.text.data);
                     if (value.type == &UA_TYPES[UA_TYPES_INT32])
                     {
+                        UA_Variant newValue;
+                        UA_Variant_init(&newValue);
                         UA_Int32 raw_date = *(UA_Int32 *)value.data;
                         data_value["value"] = raw_date;
+                        raw_date += 1;
+                        UA_Variant_setScalar(&newValue, &raw_date, &UA_TYPES[UA_TYPES_INT32]);
+                        retval = UA_Client_writeValueAttribute(client, nodeId, &newValue);
                     }
                     if (value.type == &UA_TYPES[UA_TYPES_DOUBLE])
                     {
