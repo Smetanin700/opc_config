@@ -12,7 +12,8 @@
 static UA_Boolean
 allowAddNode(UA_Server *server, UA_AccessControl *ac,
              const UA_NodeId *sessionId, void *sessionContext,
-             const UA_AddNodesItem *item) {
+             const UA_AddNodesItem *item)
+{
     printf("Called allowAddNode\n");
     return UA_TRUE;
 }
@@ -20,7 +21,8 @@ allowAddNode(UA_Server *server, UA_AccessControl *ac,
 static UA_Boolean
 allowAddReference(UA_Server *server, UA_AccessControl *ac,
                   const UA_NodeId *sessionId, void *sessionContext,
-                  const UA_AddReferencesItem *item) {
+                  const UA_AddReferencesItem *item)
+{
     printf("Called allowAddReference\n");
     return UA_TRUE;
 }
@@ -28,7 +30,8 @@ allowAddReference(UA_Server *server, UA_AccessControl *ac,
 static UA_Boolean
 allowDeleteNode(UA_Server *server, UA_AccessControl *ac,
                 const UA_NodeId *sessionId, void *sessionContext,
-                const UA_DeleteNodesItem *item) {
+                const UA_DeleteNodesItem *item)
+{
     printf("Called allowDeleteNode\n");
     return UA_FALSE; // Do not allow deletion from client
 }
@@ -36,23 +39,25 @@ allowDeleteNode(UA_Server *server, UA_AccessControl *ac,
 static UA_Boolean
 allowDeleteReference(UA_Server *server, UA_AccessControl *ac,
                      const UA_NodeId *sessionId, void *sessionContext,
-                     const UA_DeleteReferencesItem *item) {
+                     const UA_DeleteReferencesItem *item)
+{
     printf("Called allowDeleteReference\n");
     return UA_TRUE;
 }
 
 UA_Boolean running = true;
-static void stopHandler(int sign) {
+static void stopHandler(int sign)
+{
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
     running = false;
 }
 
 static UA_UsernamePasswordLogin logins[2] = {
     {UA_STRING_STATIC("peter"), UA_STRING_STATIC("peter123")},
-    {UA_STRING_STATIC("paula"), UA_STRING_STATIC("paula123")}
-};
+    {UA_STRING_STATIC("paula"), UA_STRING_STATIC("paula123")}};
 
-int main(void) {
+int main(void)
+{
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
@@ -63,8 +68,8 @@ int main(void) {
     /* Disable anonymous logins, enable two user/password logins */
     config->accessControl.clear(&config->accessControl);
     UA_StatusCode retval = UA_AccessControl_default(config, false, NULL,
-             &config->securityPolicies[config->securityPoliciesSize-1].policyUri, 2, logins);
-    if(retval != UA_STATUSCODE_GOOD)
+                                                    &config->securityPolicies[config->securityPoliciesSize - 1].policyUri, 2, logins);
+    if (retval != UA_STATUSCODE_GOOD)
         goto cleanup;
 
     /* Set accessControl functions for nodeManagement */
@@ -75,7 +80,7 @@ int main(void) {
 
     retval = UA_Server_run(server, &running);
 
- cleanup:
+cleanup:
     UA_Server_delete(server);
     return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }

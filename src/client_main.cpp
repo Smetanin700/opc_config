@@ -52,8 +52,8 @@ int main()
     bool one = true;
 
     while (running)
-    {        
-        retval = UA_Client_connect(client, opc.c_str());
+    {
+        retval = UA_Client_connectUsername(client, opc.c_str(), "paula", "paula123");
         if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
         {
             continue;
@@ -71,27 +71,29 @@ int main()
         request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;                  // Запрашиваем все возможные результаты
         UA_BrowseResponse response = UA_Client_Service_browse(client, request);
 
-        if(one){
+        if (one)
+        {
             one = false;
-        UA_Int32 myVariableValue = 42;
-        UA_VariableAttributes myVariableAttributes = UA_VariableAttributes_default;
-        myVariableAttributes.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-        myVariableAttributes.displayName = UA_LOCALIZEDTEXT("en-US", "My Variable");
-        myVariableAttributes.dataType = UA_TYPES[UA_TYPES_INT32].typeId;
-        myVariableAttributes.valueRank = -1;
+            UA_Int32 myVariableValue = 42;
+            UA_VariableAttributes myVariableAttributes = UA_VariableAttributes_default;
+            myVariableAttributes.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+            myVariableAttributes.displayName = UA_LOCALIZEDTEXT("en-US", "My Variable");
+            myVariableAttributes.dataType = UA_TYPES[UA_TYPES_INT32].typeId;
+            myVariableAttributes.valueRank = -1;
 
-        UA_NodeId variableNodeId = UA_NODEID_NULL;
-        UA_StatusCode retval = UA_Client_addVariableNode(client, variableNodeId,
-                                                    UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
-                                                    UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                                                    UA_QUALIFIEDNAME(1, "my_variable"),
-                                                    UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-                                                    myVariableAttributes, &variableNodeId);
-                                                    
+            UA_NodeId variableNodeId = UA_NODEID_NULL;
+            UA_StatusCode retval = UA_Client_addVariableNode(client, variableNodeId,
+                                                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+                                                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                                                             UA_QUALIFIEDNAME(1, "my_variable"),
+                                                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+                                                             myVariableAttributes, &variableNodeId);
         }
         // Обработка ответа и чтение значений переменных
         for (size_t i = 0; i < response.resultsSize; ++i)
         {
+            json data_value;
+            int count = 0;
             for (size_t j = 0; j < response.results[i].referencesSize; ++j)
             {
                 UA_ReferenceDescription *ref = &(response.results[i].references[j]);
@@ -112,11 +114,10 @@ int main()
 
                 if (readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue)
                 {
-                    json data_value;
                     UA_Variant value = readResponse.results[0].value;
                     char *name = (char *)UA_malloc(sizeof(char) * ref->displayName.text.length + 1);
                     memccpy(name, ref->displayName.text.data, 0, ref->displayName.text.length);
-                    data_value["name"] = name;
+                    data_value[count]["name"] = name;
 
                     // Обработка значения переменной
                     if (value.type == &UA_TYPES[UA_TYPES_INT32])
@@ -124,7 +125,7 @@ int main()
                         UA_Variant newValue;
                         UA_Variant_init(&newValue);
                         UA_Int32 raw_date = *(UA_Int32 *)value.data;
-                        data_value["value"] = raw_date;
+                        data_value[count]["value"] = raw_date;
                         raw_date += 1;
                         UA_Variant_setScalar(&newValue, &raw_date, &UA_TYPES[UA_TYPES_INT32]);
                         retval = UA_Client_writeValueAttribute(client, nodeId, &newValue);
@@ -132,12 +133,14 @@ int main()
                     if (value.type == &UA_TYPES[UA_TYPES_DOUBLE])
                     {
                         UA_Double raw_date = *(UA_Double *)value.data;
-                        data_value["value"] = raw_date;
+                        data_value[count]["value"] = raw_date;
                     }
-                    std::string s = data_value.dump();
-                    std::cout << s << std::endl;
+                    count++;
                 }
             }
+            std::string s = data_value.dump();
+            std::cout << s << std::endl;
+
         }
         UA_sleep_ms(1000);
     };
