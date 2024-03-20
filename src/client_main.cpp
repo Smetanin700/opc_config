@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 #include "../include/json.hpp"
 
@@ -17,15 +18,6 @@ UA_Boolean running = true;
 static void stopHandler(int sign)
 {
     running = 0;
-}
-
-json ReadConfig() // Считываем файл конфигурации
-{
-    std::ifstream f("../configs/client_test.json");
-    json data = json::parse(f);
-    json object = data["settings"];
-    std::string address = object[0]["address"];
-    return object;
 }
 
 inline UA_BrowseResponse GetResponse(UA_Client *client) // Получение данных о переменных
@@ -39,10 +31,26 @@ inline UA_BrowseResponse GetResponse(UA_Client *client) // Получение д
     return UA_Client_Service_browse(client, request);
 }
 
+inline UA_ReadResponse ReadResponse(UA_Client *client, UA_NodeId nodeId)
+{
+    UA_ReadRequest readRequest;
+    UA_ReadRequest_init(&readRequest);
+    readRequest.nodesToRead = UA_ReadValueId_new();
+    readRequest.nodesToReadSize = 1;
+    readRequest.nodesToRead[0].nodeId = nodeId;
+    readRequest.nodesToRead[0].attributeId = UA_ATTRIBUTEID_VALUE;
+    return UA_Client_Service_read(client, readRequest);
+}
+
 int main()
 {
     signal(SIGINT, stopHandler);
-    json settings = ReadConfig();
+
+    std::ifstream f("../configs/client_test.json");
+    json data = json::parse(f);
+    f.close();
+    json settings = data["settings"];
+
     std::string address = settings[0]["address"];
     std::string login = settings[0]["login"];
     std::string password = settings[0]["password"];
@@ -71,15 +79,13 @@ int main()
             continue;
         }
 
-        UA_BrowseResponse response = GetResponse(client);
-
         if (one)
         {
             one = false;
-            UA_Int32 myVariableValue = 42;
-            UA_Variant value;
+            //TODO Перенести в функцию
             UA_VariableAttributes myVariableAttributes = UA_VariableAttributes_default;
             myVariableAttributes.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+
             myVariableAttributes.displayName = UA_LOCALIZEDTEXT("en-US", "My Variable");
             myVariableAttributes.dataType = UA_TYPES[UA_TYPES_INT32].typeId;
             myVariableAttributes.valueRank = -1;
@@ -88,10 +94,13 @@ int main()
             UA_StatusCode retval = UA_Client_addVariableNode(client, variableNodeId,
                                                              UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                                              UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                                                             UA_QUALIFIEDNAME(1, "my_variable"),
+                                                             UA_QUALIFIEDNAME(1, "My Variable"),
                                                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
                                                              myVariableAttributes, &variableNodeId);
         }
+
+        UA_BrowseResponse response = GetResponse(client);
+
         // Обработка ответа и чтение значений переменных
         for (size_t i = 0; i < response.resultsSize; ++i)
         {
@@ -107,13 +116,7 @@ int main()
 
                 UA_NodeId nodeId = ref->nodeId.nodeId;
 
-                UA_ReadRequest readRequest;
-                UA_ReadRequest_init(&readRequest);
-                readRequest.nodesToRead = UA_ReadValueId_new();
-                readRequest.nodesToReadSize = 1;
-                readRequest.nodesToRead[0].nodeId = nodeId;
-                readRequest.nodesToRead[0].attributeId = UA_ATTRIBUTEID_VALUE;
-                UA_ReadResponse readResponse = UA_Client_Service_read(client, readRequest);
+                UA_ReadResponse readResponse = ReadResponse(client, nodeId);
 
                 if (readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue)
                 {
