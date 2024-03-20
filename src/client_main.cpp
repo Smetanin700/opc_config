@@ -19,26 +19,33 @@ static void stopHandler(int sign)
     running = 0;
 }
 
-std::string ReadConfig() // Считываем файл конфигурации
+json ReadConfig() // Считываем файл конфигурации
 {
     std::ifstream f("../configs/client_test.json");
-    std::string opc = "opc.tcp://";
-
     json data = json::parse(f);
     json object = data["settings"];
-    std::string address = object[0]["ip"];
-    int port = object[0]["port"];
+    std::string address = object[0]["address"];
+    return object;
+}
 
-    opc += address;
-    opc += ":";
-    opc += std::to_string(port);
-    return opc;
+inline UA_BrowseResponse GetResponse(UA_Client *client) // Получение данных о переменных
+{
+    UA_BrowseRequest request;
+    UA_BrowseRequest_init(&request);
+    request.nodesToBrowse = UA_BrowseDescription_new();
+    request.nodesToBrowseSize = 1;
+    request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); // Идентификатор корневой папки объектов сервера
+    request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;                  // Запрашиваем все возможные результаты
+    return UA_Client_Service_browse(client, request);
 }
 
 int main()
 {
     signal(SIGINT, stopHandler);
-    std::string opc = ReadConfig();
+    json settings = ReadConfig();
+    std::string address = settings[0]["address"];
+    std::string login = settings[0]["login"];
+    std::string password = settings[0]["password"];
 
     UA_Client *client = UA_Client_new();
     UA_ClientConfig *cc = UA_Client_getConfig(client); // Создание клиента
@@ -53,7 +60,7 @@ int main()
 
     while (running)
     {
-        retval = UA_Client_connectUsername(client, opc.c_str(), "paula", "paula123");
+        retval = UA_Client_connectUsername(client, address.c_str(), login.c_str(), password.c_str());
         if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
         {
             continue;
@@ -63,18 +70,14 @@ int main()
             UA_sleep_ms(1000);
             continue;
         }
-        UA_BrowseRequest request;
-        UA_BrowseRequest_init(&request);
-        request.nodesToBrowse = UA_BrowseDescription_new();
-        request.nodesToBrowseSize = 1;
-        request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); // Идентификатор корневой папки объектов сервера
-        request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;                  // Запрашиваем все возможные результаты
-        UA_BrowseResponse response = UA_Client_Service_browse(client, request);
+
+        UA_BrowseResponse response = GetResponse(client);
 
         if (one)
         {
             one = false;
             UA_Int32 myVariableValue = 42;
+            UA_Variant value;
             UA_VariableAttributes myVariableAttributes = UA_VariableAttributes_default;
             myVariableAttributes.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
             myVariableAttributes.displayName = UA_LOCALIZEDTEXT("en-US", "My Variable");
@@ -140,7 +143,6 @@ int main()
             }
             std::string s = data_value.dump();
             std::cout << s << std::endl;
-
         }
         UA_sleep_ms(1000);
     };
