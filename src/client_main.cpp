@@ -7,13 +7,13 @@
 
 #include <fstream>
 #include <iostream>
-#include <algorithm>
 
 #include "../include/json.hpp"
 
 using json = nlohmann::json;
 
 UA_Boolean running = true;
+UA_StatusCode retval;
 
 static void stopHandler(int sign)
 {
@@ -42,15 +42,37 @@ inline UA_ReadResponse ReadResponse(UA_Client *client, UA_NodeId nodeId)
     return UA_Client_Service_read(client, readRequest);
 }
 
+inline UA_NodeId CreateVariable(UA_Client *client, char *name, UA_NodeId type)
+{
+    UA_VariableAttributes myVariableAttributes = UA_VariableAttributes_default;
+    myVariableAttributes.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+
+    myVariableAttributes.displayName = UA_LOCALIZEDTEXT("en-US", name);
+    myVariableAttributes.dataType = type;
+    myVariableAttributes.valueRank = -1;
+
+    UA_NodeId varNodeId = UA_NODEID_NULL;
+    retval = UA_Client_addVariableNode(client, varNodeId,
+                                                     UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
+                                                     UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                                                     UA_QUALIFIEDNAME(1, name),
+                                                     UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+                                                     myVariableAttributes, &varNodeId);
+    return varNodeId;
+}
+
 int main()
 {
     signal(SIGINT, stopHandler);
 
-    std::ifstream f("../configs/client_test.json");
-    json data = json::parse(f);
-    f.close();
-    json settings = data["settings"];
-
+    std::ifstream fs("../configs/client_test.json");
+    std::ifstream fv("../configs/variable_test.json");
+    json dataSettings = json::parse(fs);
+    json dataVariables = json::parse(fv);
+    
+    json settings = dataSettings["settings"];
+    json variables = dataVariables["variables"];
+    
     std::string address = settings[0]["address"];
     std::string login = settings[0]["login"];
     std::string password = settings[0]["password"];
@@ -61,42 +83,25 @@ int main()
 
     cc->timeout = 1000;
 
-    UA_StatusCode retval;
-    UA_Variant value;
-    UA_Variant_init(&value);
     bool one = true;
 
     while (running)
     {
         retval = UA_Client_connectUsername(client, address.c_str(), login.c_str(), password.c_str());
-        if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
-        {
-            continue;
-        }
-        if (retval != UA_STATUSCODE_GOOD)
-        {
-            UA_sleep_ms(1000);
-            continue;
-        }
+        if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED) continue;
+        if (retval != UA_STATUSCODE_GOOD) { UA_sleep_ms(1000); continue; }
 
         if (one)
         {
+            std::string varName = variables[0]["name"];
+            if(variables[0]["value"].is_number_integer())
+                UA_NodeId newNode = CreateVariable(client, "name", UA_TYPES[UA_TYPES_INT32].typeId);
+            if(variables[0]["value"].is_number_float())
+                UA_NodeId newNode = CreateVariable(client, "name", UA_TYPES[UA_TYPES_FLOAT].typeId);
+            if(variables[0]["value"].is_string())
+                UA_NodeId newNode = CreateVariable(client, "name", UA_TYPES[UA_TYPES_STRING].typeId);
             one = false;
-            //TODO Перенести в функцию
-            UA_VariableAttributes myVariableAttributes = UA_VariableAttributes_default;
-            myVariableAttributes.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-
-            myVariableAttributes.displayName = UA_LOCALIZEDTEXT("en-US", "My Variable");
-            myVariableAttributes.dataType = UA_TYPES[UA_TYPES_INT32].typeId;
-            myVariableAttributes.valueRank = -1;
-
-            UA_NodeId variableNodeId = UA_NODEID_NULL;
-            UA_StatusCode retval = UA_Client_addVariableNode(client, variableNodeId,
-                                                             UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
-                                                             UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                                                             UA_QUALIFIEDNAME(1, "My Variable"),
-                                                             UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-                                                             myVariableAttributes, &variableNodeId);
+            
         }
 
         UA_BrowseResponse response = GetResponse(client);
@@ -109,10 +114,7 @@ int main()
             for (size_t j = 0; j < response.results[i].referencesSize; ++j)
             {
                 UA_ReferenceDescription *ref = &(response.results[i].references[j]);
-                if (ref->nodeClass != UA_NODECLASS_VARIABLE)
-                {
-                    continue; // Пропускаем узлы, которые не являются переменными
-                }
+                if (ref->nodeClass != UA_NODECLASS_VARIABLE) { continue; } // Пропускаем узлы, которые не являются переменными
 
                 UA_NodeId nodeId = ref->nodeId.nodeId;
 
@@ -120,10 +122,11 @@ int main()
 
                 if (readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue)
                 {
-                    UA_Variant value = readResponse.results[0].value;
                     char *name = (char *)UA_malloc(sizeof(char) * ref->displayName.text.length + 1);
-                    memccpy(name, ref->displayName.text.data, 0, ref->displayName.text.length);
+                    memccpy(name, ref->displayName.text.data, 0, ref->displayName.text.length); // Получение названия переменной
                     data_value[count]["name"] = name;
+
+                    UA_Variant value = readResponse.results[0].value;
 
                     // Обработка значения переменной
                     if (value.type == &UA_TYPES[UA_TYPES_INT32])
@@ -150,7 +153,6 @@ int main()
         UA_sleep_ms(1000);
     };
 
-    UA_Variant_clear(&value);
     UA_Client_delete(client);
     return EXIT_SUCCESS;
 }

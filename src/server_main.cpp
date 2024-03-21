@@ -9,20 +9,23 @@
 #include <stdlib.h>
 
 static volatile UA_Boolean running = true;
-static void stopHandler(int sign) {
+static void stopHandler(int sign)
+{
     running = false;
 }
 
 static void dataChangeNotificationCallback(UA_Server *server, UA_UInt32 monitoredItemId,
-                               void *monitoredItemContext, const UA_NodeId *nodeId,
-                               void *nodeContext, UA_UInt32 attributeId,
-                               const UA_DataValue *value) {
+                                           void *monitoredItemContext, const UA_NodeId *nodeId,
+                                           void *nodeContext, UA_UInt32 attributeId,
+                                           const UA_DataValue *value)
+{
     UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND, "Received Notification");
 }
 
-static void addMonitoredItemVariable(UA_Server *server, UA_NodeId nodeId) {    
+static void addMonitoredItemVariable(UA_Server *server, UA_NodeId nodeId)
+{
     UA_MonitoredItemCreateRequest monRequest = UA_MonitoredItemCreateRequest_default(nodeId);
-    monRequest.requestedParameters.samplingInterval = 100.0; 
+    monRequest.requestedParameters.samplingInterval = 100.0;
     UA_Server_createDataChangeMonitoredItem(server, UA_TIMESTAMPSTORETURN_SOURCE, monRequest, NULL, dataChangeNotificationCallback);
 }
 
@@ -30,8 +33,8 @@ static UA_UsernamePasswordLogin logins[2] = {
     {UA_STRING_STATIC("peter"), UA_STRING_STATIC("peter123")},
     {UA_STRING_STATIC("paula"), UA_STRING_STATIC("paula123")}};
 
-
-int main(void) {
+int main(void)
+{
     UA_Server *server = UA_Server_new();
     UA_ServerConfig *config = UA_Server_getConfig(server);
     UA_ServerConfig_setDefault(config);
@@ -53,11 +56,11 @@ int main(void) {
                               UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                               var2Name, UA_NODEID_NULL, attr2, NULL, NULL);
 
-    addMonitoredItemVariable(server, var2NodeId);   
+    addMonitoredItemVariable(server, var2NodeId);
 
     // Запуск сервера
     retval = UA_Server_run(server, &running);
-    
+
     // Очистка ресурсов
     UA_Server_delete(server);
 
