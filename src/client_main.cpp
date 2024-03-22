@@ -94,12 +94,7 @@ int main()
         if (one)
         {
             std::string varName = variables[0]["name"];
-            if(variables[0]["value"].is_number_integer())
-                UA_NodeId newNode = CreateVariable(client, "name", UA_TYPES[UA_TYPES_INT32].typeId);
-            if(variables[0]["value"].is_number_float())
-                UA_NodeId newNode = CreateVariable(client, "name", UA_TYPES[UA_TYPES_FLOAT].typeId);
-            if(variables[0]["value"].is_string())
-                UA_NodeId newNode = CreateVariable(client, "name", UA_TYPES[UA_TYPES_STRING].typeId);
+            UA_NodeId newNode = CreateVariable(client, "name", UA_TYPES[UA_TYPES_INT32].typeId);
             one = false;
             
         }
