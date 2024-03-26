@@ -12,60 +12,85 @@ int main()
     json settings = dataSettings["settings"];
     json variables = dataVariables["variables"];
 
-    string address = settings[0]["address"];
-    string login = settings[0]["login"];
-    string password = settings[0]["password"];
+    UA_Client *client = InitClient();
 
-    UA_Client *client = UA_Client_new();               // Создание клиента
-    UA_ClientConfig *cc = UA_Client_getConfig(client); //
-    UA_ClientConfig_setDefault(cc);                    //
-
-    cc->timeout = 1000;
-
-    bool isExist = true;
+    int count = 0;
+    json varOut;
 
     while (running)
     {
-        retval = UA_Client_connectUsername(client, address.c_str(), login.c_str(), password.c_str());
-        if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED) continue;
-        if (retval != UA_STATUSCODE_GOOD) { UA_sleep_ms(1000); continue; }
+        // retval = UA_Client_connectUsername(client,
+        //                                    ((string)settings[0]["address"]).c_str(),
+        //                                    ((string)settings[0]["login"]).c_str(),
+        //                                    ((string)settings[0]["password"]).c_str());
+
+        retval = UA_Client_connect(client, ((string)settings[0]["address"]).c_str());
+        if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
+            continue;
+        if (retval != UA_STATUSCODE_GOOD)
+        {
+            UA_sleep_ms(1000);
+            continue;
+        }
 
         UA_BrowseResponse response = GetResponse(client);
 
         for (size_t i = 0; i < response.resultsSize; ++i)
         {
-            for (size_t j = 0; j < response.results[i].referencesSize; ++j)
+            int findIndex = -1;
+
+            for (int k = 0; k < variables.size(); k++)
             {
-                UA_ReferenceDescription *ref = &(response.results[i].references[j]);
-                if (ref->nodeClass != UA_NODECLASS_VARIABLE) { continue; } // Пропускаем узлы, которые не являются переменными
-
-                UA_NodeId nodeId = ref->nodeId.nodeId;
-                UA_ReadResponse readResponse = ReadResponse(client, nodeId);
-
-                if (readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue)
+                for (size_t j = 0; j < response.results[i].referencesSize; ++j)
                 {
-                    string name = UastrToCharArr(ref->displayName.text);
-                    bool find = false;                    
+                    UA_ReferenceDescription *ref = &(response.results[i].references[j]);
+                    if (ref->nodeClass != UA_NODECLASS_VARIABLE)
+                    {
+                        continue;
+                    } // Пропускаем узлы, которые не являются переменными
 
-                    for (int k = 0; k < variables.size(); k++)
+                    UA_NodeId nodeId = ref->nodeId.nodeId;
+                    UA_ReadResponse readResponse = ReadResponse(client, nodeId);
+
+                    if (readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue)
+                    {
+                        string name = UastrToCharArr(ref->displayName.text);
+                        UA_Variant *newValue;
+
                         if (name == variables[k]["name"])
                         {
-                            UA_Variant newValue;
-                            UA_Variant_init(&newValue);
-                            SetVariant(variables[k], &newValue);
-                            retval = UA_Client_writeValueAttribute(client, nodeId, &newValue);
-                            find = true;
-                            break;
+                            CreateVariant(variables[k], newValue);
+                            retval = UA_Client_writeValueAttribute(client, nodeId, newValue);
+                            findIndex = k;
+                            varOut[count]["value"] = variables[findIndex]["value"];
+                            varOut[count]["name"] = variables[findIndex]["name"];
+                            cout << "find" << endl;
+                            count++;
+                            continue;
                         }
 
-                    if(!find)
-                    {
-
+                        varOut[count]["name"] = UastrToCharArr(ref->displayName.text);
+                        VariantToJson(varOut[count], readResponse.results[0].value);
+                        count++;
                     }
                 }
+
+                if (findIndex < 0)
+                {
+                    UA_Variant newValue;
+                    UA_Variant_init(&newValue);
+                    CreateVariable(client,
+                                   ((string)variables[k]["name"]).c_str(),
+                                   variables[k], &newValue);
+                    varOut[count]["value"] = variables[k]["value"];
+                    varOut[count]["name"] = variables[k]["name"];
+                    count++;
+                }
+                findIndex = -1;
             }
         }
 
+        std::cout << varOut.dump() << std::endl;
         UA_sleep_ms(1000);
     };
 

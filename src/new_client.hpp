@@ -33,17 +33,35 @@ static void stopHandler(int sign)
     running = 0;
 }
 
-inline UA_BrowseResponse GetResponse(UA_Client *client) // Получение данных о переменных
+/*
+Создание клиента
+*/
+inline UA_Client *InitClient()
+{
+    UA_Client *client = UA_Client_new();               
+    UA_ClientConfig *cc = UA_Client_getConfig(client); 
+    UA_ClientConfig_setDefault(cc);    
+    cc->timeout = 1000;
+    return client;
+}
+
+/*
+Отправка запроса на получение переменных сервера
+*/
+inline UA_BrowseResponse GetResponse(UA_Client *client) 
 {
     UA_BrowseRequest request;
     UA_BrowseRequest_init(&request);
     request.nodesToBrowse = UA_BrowseDescription_new();
     request.nodesToBrowseSize = 1;
-    request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); // Идентификатор корневой папки объектов сервера
-    request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;                  // Запрашиваем все возможные результаты
+    request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); 
+    request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;                  
     return UA_Client_Service_browse(client, request);
 }
 
+/*
+Чтение ответа от сервера
+*/
 inline UA_ReadResponse ReadResponse(UA_Client *client, UA_NodeId nodeId)
 {
     UA_ReadRequest readRequest;
@@ -55,9 +73,28 @@ inline UA_ReadResponse ReadResponse(UA_Client *client, UA_NodeId nodeId)
     return UA_Client_Service_read(client, readRequest);
 }
 
-inline UA_DataType *GetDataType(DataType type)
+/*
+Получение типа переменной в json 
+*/
+inline DataType GetTypeJson(json value)
 {
-    UA_DataType nodeType;
+    if (value["value"].is_number_float())
+        return FLOAT;
+    else if (value["value"].is_boolean())
+        return BOOL;
+    else if (value["value"].is_number_integer())
+        return INT32;
+    else if (value["value"].is_string())
+        return STRING;
+    else
+        return NONETYPE;
+}
+
+/*
+Получение типа переменной open62541
+*/
+inline void GetDataType(DataType type, UA_DataType nodeType)
+{    
     switch (type)
     {
     case INT32:
@@ -75,23 +112,36 @@ inline UA_DataType *GetDataType(DataType type)
     default:
         break;
     }
-    return &nodeType;
 }
 
-inline DataType GetTypeJson(json value)
+/*
+Получение типа переменной open62541
+*/
+inline void GetDataType(json value, UA_DataType nodeType)
 {
-    if(value.is_number_float())
-        return FLOAT;
-    if(value.is_boolean())
-        return BOOL;
-    if(value.is_number_integer())
-        return INT32;
-    if(value.is_string())
-        return STRING;
-    return NONETYPE;    
+    switch (GetTypeJson(value))
+    {
+    case INT32:
+        nodeType = UA_TYPES[UA_TYPES_INT32];
+        break;
+    case FLOAT:
+        nodeType = UA_TYPES[UA_TYPES_FLOAT];
+        break;
+    case STRING:
+        nodeType = UA_TYPES[UA_TYPES_STRING];
+        break;
+    case BOOL:
+        nodeType = UA_TYPES[UA_TYPES_BOOLEAN];
+        break;
+    default:
+        break;
+    }
 }
 
-inline void SetVariant(json value, UA_Variant *variant)
+/*
+Создание универсальной переменной для open62541
+*/
+inline void CreateVariant(json value, UA_Variant *variant)
 {
     switch (GetTypeJson(value))
     {
@@ -124,26 +174,37 @@ inline void SetVariant(json value, UA_Variant *variant)
     }
 }
 
-inline UA_NodeId CreateVariable(UA_Client *client, char *name, DataType type)
+/*
+Создание переменной на сервере
+*/
+inline UA_NodeId CreateVariable(UA_Client *client, const char *name, json value, UA_Variant *variant)
 {
     UA_VariableAttributes attr = UA_VariableAttributes_default;
     attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+    attr.displayName = UA_LOCALIZEDTEXT("en-US", (char *)name);
 
-    attr.displayName = UA_LOCALIZEDTEXT("en-US", name);
+    UA_DataType nodeType;
+    GetDataType(value, nodeType);
+    CreateVariant(value, variant);
 
-    attr.dataType = GetDataType(type)->typeId;
+    attr.dataType = nodeType.typeId;
     attr.valueRank = -1;
 
+    UA_Variant_setScalar(&attr.value, variant, &nodeType);
     UA_NodeId varNodeId = UA_NODEID_NULL;
+
     retval = UA_Client_addVariableNode(client, varNodeId,
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                                       UA_QUALIFIEDNAME(1, name),
+                                       UA_QUALIFIEDNAME(1, (char *)name),
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
                                        attr, &varNodeId);
     return varNodeId;
 }
 
+/*
+Преобразование UA_String в строку С
+*/
 inline char *UastrToCharArr(UA_String uastr)
 {
     char *name = (char *)UA_malloc(sizeof(char) * uastr.length + 1);
@@ -151,7 +212,25 @@ inline char *UastrToCharArr(UA_String uastr)
     return name;
 }
 
-inline void *__restrict__ PrepareValue()
+/*
+Запись UA_Variant в json
+*/
+inline void VariantToJson(json js, UA_Variant variant)
 {
-
+    if(variant.type == &UA_TYPES[UA_TYPES_FLOAT]){
+        UA_Float val = *(UA_Float *)variant.data;
+        js["value"] = val;
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_INT32]){
+        UA_Int32 val = *(UA_Int32 *)variant.data;
+        js["value"] = val;
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]){
+        UA_Boolean val = *(UA_Boolean *)variant.data;
+        js["value"] = val;
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_STRING]){
+        UA_String val = *(UA_String *)variant.data;
+        js["value"] = UastrToCharArr(val);
+    }
 }
