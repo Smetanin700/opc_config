@@ -101,7 +101,7 @@ inline void GetDataType(DataType type, UA_DataType nodeType)
         nodeType = UA_TYPES[UA_TYPES_INT32];
         break;
     case FLOAT:
-        nodeType = UA_TYPES[UA_TYPES_FLOAT];
+        nodeType = UA_TYPES[UA_TYPES_DOUBLE];
         break;
     case STRING:
         nodeType = UA_TYPES[UA_TYPES_STRING];
@@ -125,7 +125,7 @@ inline void GetDataType(json value, UA_DataType nodeType)
         nodeType = UA_TYPES[UA_TYPES_INT32];
         break;
     case FLOAT:
-        nodeType = UA_TYPES[UA_TYPES_FLOAT];
+        nodeType = UA_TYPES[UA_TYPES_DOUBLE];
         break;
     case STRING:
         nodeType = UA_TYPES[UA_TYPES_STRING];
@@ -154,7 +154,7 @@ inline void CreateVariant(json value, UA_Variant *variant)
     case FLOAT:
     {
         UA_Float floatval = value["value"];
-        UA_Variant_setScalar(variant, &floatval, &UA_TYPES[UA_TYPES_FLOAT]);
+        UA_Variant_setScalar(variant, &floatval, &UA_TYPES[UA_TYPES_DOUBLE]);
         break;
     }
     case STRING:
@@ -181,22 +181,22 @@ inline UA_NodeId CreateVariable(UA_Client *client, const char *name, json value,
 {
     UA_VariableAttributes attr = UA_VariableAttributes_default;
     attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-    attr.displayName = UA_LOCALIZEDTEXT("en-US", (char *)name);
+    attr.displayName = UA_LOCALIZEDTEXT("en-US", "name");
 
-    UA_DataType nodeType;
-    GetDataType(value, nodeType);
-    CreateVariant(value, variant);
+    // UA_DataType nodeType;
+    // GetDataType(value, nodeType);
+    // CreateVariant(value, variant);
 
-    attr.dataType = nodeType.typeId;
+    // attr.dataType = nodeType.typeId;
     attr.valueRank = -1;
 
-    UA_Variant_setScalar(&attr.value, variant, &nodeType);
+    // UA_Variant_setScalar(&attr.value, variant, &nodeType);
     UA_NodeId varNodeId = UA_NODEID_NULL;
 
     retval = UA_Client_addVariableNode(client, varNodeId,
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                                       UA_QUALIFIEDNAME(1, (char *)name),
+                                       UA_QUALIFIEDNAME(1, "name"),
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
                                        attr, &varNodeId);
     return varNodeId;
@@ -217,20 +217,26 @@ inline char *UastrToCharArr(UA_String uastr)
 */
 inline void VariantToJson(json js, UA_Variant variant)
 {
-    if(variant.type == &UA_TYPES[UA_TYPES_FLOAT]){
-        UA_Float val = *(UA_Float *)variant.data;
+    cout << "vartojs" << endl;
+    if(variant.type == &UA_TYPES[UA_TYPES_DOUBLE]){
+        cout << "float" << endl;
+        UA_Double val = *(UA_Double *)variant.data;        
         js["value"] = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_INT32]){
+        cout << "int" << endl;
         UA_Int32 val = *(UA_Int32 *)variant.data;
         js["value"] = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]){
+        cout << "bool" << endl;
         UA_Boolean val = *(UA_Boolean *)variant.data;
         js["value"] = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_STRING]){
+        cout << "str" << endl;
         UA_String val = *(UA_String *)variant.data;
         js["value"] = UastrToCharArr(val);
     }
+    cout << js["name"] << endl;
 }

@@ -14,17 +14,16 @@ int main()
 
     UA_Client *client = InitClient();
 
-    int count = 0;
     json varOut;
 
     while (running)
     {
-        // retval = UA_Client_connectUsername(client,
-        //                                    ((string)settings[0]["address"]).c_str(),
-        //                                    ((string)settings[0]["login"]).c_str(),
-        //                                    ((string)settings[0]["password"]).c_str());
+        retval = UA_Client_connectUsername(client,
+                                           ((string)settings[0]["address"]).c_str(),
+                                           ((string)settings[0]["login"]).c_str(),
+                                           ((string)settings[0]["password"]).c_str());
 
-        retval = UA_Client_connect(client, ((string)settings[0]["address"]).c_str());
+        // retval = UA_Client_connect(client, ((string)settings[0]["address"]).c_str());
         if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
             continue;
         if (retval != UA_STATUSCODE_GOOD)
@@ -41,6 +40,7 @@ int main()
 
             for (int k = 0; k < variables.size(); k++)
             {
+                int count = 0;
                 for (size_t j = 0; j < response.results[i].referencesSize; ++j)
                 {
                     UA_ReferenceDescription *ref = &(response.results[i].references[j]);
@@ -64,12 +64,12 @@ int main()
                             findIndex = k;
                             varOut[count]["value"] = variables[findIndex]["value"];
                             varOut[count]["name"] = variables[findIndex]["name"];
-                            cout << "find" << endl;
                             count++;
                             continue;
                         }
 
                         varOut[count]["name"] = UastrToCharArr(ref->displayName.text);
+                        std::cout << varOut.dump() << std::endl;
                         VariantToJson(varOut[count], readResponse.results[0].value);
                         count++;
                     }

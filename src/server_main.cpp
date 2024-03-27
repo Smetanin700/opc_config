@@ -39,9 +39,9 @@ int main(void)
     UA_ServerConfig *config = UA_Server_getConfig(server);
     UA_ServerConfig_setDefault(config);
 
-    //config->accessControl.clear(&config->accessControl);
-    //UA_StatusCode retval = UA_AccessControl_default(config, false, NULL,
-    //                                                &config->securityPolicies[config->securityPoliciesSize - 1].policyUri, 2, logins);
+    config->accessControl.clear(&config->accessControl);
+    UA_StatusCode retval = UA_AccessControl_default(config, false, NULL,
+                                                   &config->securityPolicies[config->securityPoliciesSize - 1].policyUri, 2, logins);
 
     // Создание переменной
     UA_Double variable2 = 3.14;
@@ -59,7 +59,7 @@ int main(void)
     addMonitoredItemVariable(server, var2NodeId);
 
     // Запуск сервера
-    UA_StatusCode retval = UA_Server_run(server, &running);
+    retval = UA_Server_run(server, &running);
 
     // Очистка ресурсов
     UA_Server_delete(server);
