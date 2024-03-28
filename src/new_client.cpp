@@ -55,35 +55,33 @@ int main()
                     if (readResponse.responseHeader.serviceResult == UA_STATUSCODE_GOOD && readResponse.resultsSize > 0 && readResponse.results[0].hasValue)
                     {
                         string name = UastrToCharArr(ref->displayName.text);
-                        UA_Variant *newValue;
+                        UA_Variant newValue;
+                        UA_Variant value = readResponse.results[0].value;
 
                         if (name == variables[k]["name"])
                         {
-                            CreateVariant(variables[k], newValue);
-                            retval = UA_Client_writeValueAttribute(client, nodeId, newValue);
+                            CreateVariant(variables[k], &newValue);
+                            retval = UA_Client_writeValueAttribute(client, nodeId, &newValue);
                             findIndex = k;
-                            varOut[count]["value"] = variables[findIndex]["value"];
-                            varOut[count]["name"] = variables[findIndex]["name"];
+                            varOut[variables[findIndex]["name"]] = variables[findIndex]["value"];
                             count++;
                             continue;
                         }
 
-                        varOut[count]["name"] = UastrToCharArr(ref->displayName.text);
                         std::cout << varOut.dump() << std::endl;
-                        VariantToJson(varOut[count], readResponse.results[0].value);
+                        VariantToJson(varOut[UastrToCharArr(ref->displayName.text)], value);
                         count++;
                     }
                 }
 
                 if (findIndex < 0)
-                {
+                {                    
                     UA_Variant newValue;
                     UA_Variant_init(&newValue);
                     CreateVariable(client,
                                    ((string)variables[k]["name"]).c_str(),
                                    variables[k], &newValue);
-                    varOut[count]["value"] = variables[k]["value"];
-                    varOut[count]["name"] = variables[k]["name"];
+                    varOut[variables[k]["name"]] = variables[k]["value"];
                     count++;
                 }
                 findIndex = -1;

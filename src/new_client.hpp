@@ -23,7 +23,7 @@ typedef enum
 {
     INT32 = 1,
     BOOL = 2, 
-    FLOAT = 3,
+    DOUBLE = 3,
     STRING = 4,
     NONETYPE = 0
 } DataType;
@@ -79,7 +79,7 @@ inline UA_ReadResponse ReadResponse(UA_Client *client, UA_NodeId nodeId)
 inline DataType GetTypeJson(json value)
 {
     if (value["value"].is_number_float())
-        return FLOAT;
+        return DOUBLE;
     else if (value["value"].is_boolean())
         return BOOL;
     else if (value["value"].is_number_integer())
@@ -100,7 +100,7 @@ inline void GetDataType(DataType type, UA_DataType nodeType)
     case INT32:
         nodeType = UA_TYPES[UA_TYPES_INT32];
         break;
-    case FLOAT:
+    case DOUBLE:
         nodeType = UA_TYPES[UA_TYPES_DOUBLE];
         break;
     case STRING:
@@ -124,7 +124,7 @@ inline void GetDataType(json value, UA_DataType nodeType)
     case INT32:
         nodeType = UA_TYPES[UA_TYPES_INT32];
         break;
-    case FLOAT:
+    case DOUBLE:
         nodeType = UA_TYPES[UA_TYPES_DOUBLE];
         break;
     case STRING:
@@ -151,10 +151,10 @@ inline void CreateVariant(json value, UA_Variant *variant)
         UA_Variant_setScalar(variant, &intval, &UA_TYPES[UA_TYPES_INT32]);
         break;
     }
-    case FLOAT:
+    case DOUBLE:
     {
-        UA_Float floatval = value["value"];
-        UA_Variant_setScalar(variant, &floatval, &UA_TYPES[UA_TYPES_DOUBLE]);
+        UA_Double doubleval = value["value"];
+        UA_Variant_setScalar(variant, &doubleval, &UA_TYPES[UA_TYPES_DOUBLE]);
         break;
     }
     case STRING:
@@ -177,29 +177,24 @@ inline void CreateVariant(json value, UA_Variant *variant)
 /*
 Создание переменной на сервере
 */
-inline UA_NodeId CreateVariable(UA_Client *client, const char *name, json value, UA_Variant *variant)
+inline void CreateVariable(UA_Client *client, const char *name, json value, UA_Variant *variant)
 {
     UA_VariableAttributes attr = UA_VariableAttributes_default;
     attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
     attr.displayName = UA_LOCALIZEDTEXT("en-US", "name");
-
     // UA_DataType nodeType;
     // GetDataType(value, nodeType);
     // CreateVariant(value, variant);
-
     // attr.dataType = nodeType.typeId;
     attr.valueRank = -1;
-
     // UA_Variant_setScalar(&attr.value, variant, &nodeType);
-    UA_NodeId varNodeId = UA_NODEID_NULL;
-
+    UA_NodeId varNodeId = UA_NODEID_STRING(1, "name");
     retval = UA_Client_addVariableNode(client, varNodeId,
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                                        UA_QUALIFIEDNAME(1, "name"),
-                                       UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-                                       attr, &varNodeId);
-    return varNodeId;
+                                       UA_NODEID_NULL,
+                                       attr, NULL);
 }
 
 /*
@@ -217,26 +212,20 @@ inline char *UastrToCharArr(UA_String uastr)
 */
 inline void VariantToJson(json js, UA_Variant variant)
 {
-    cout << "vartojs" << endl;
     if(variant.type == &UA_TYPES[UA_TYPES_DOUBLE]){
-        cout << "float" << endl;
         UA_Double val = *(UA_Double *)variant.data;        
-        js["value"] = val;
+        js = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_INT32]){
-        cout << "int" << endl;
         UA_Int32 val = *(UA_Int32 *)variant.data;
-        js["value"] = val;
+        js = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]){
-        cout << "bool" << endl;
         UA_Boolean val = *(UA_Boolean *)variant.data;
-        js["value"] = val;
+        js = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_STRING]){
-        cout << "str" << endl;
         UA_String val = *(UA_String *)variant.data;
-        js["value"] = UastrToCharArr(val);
+        js = UastrToCharArr(val);
     }
-    cout << js["name"] << endl;
 }
