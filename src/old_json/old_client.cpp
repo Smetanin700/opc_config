@@ -4,25 +4,24 @@ int main()
 {
     signal(SIGINT, stopHandler);
 
-    ifstream fs(clientJson);	
-    json::value dataSettings = json::value::parse(fs);
-
+    ifstream fs(clientJson);
     ifstream fv(variableJson);
-	json::value dataVariables = json::value::parse(fv);
-	
-    json::value settings = dataSettings["settings"];
-    json::value variables = dataVariables["variables"];
+    json dataSettings = json::parse(fs);
+    json dataVariables = json::parse(fv);
+
+    json settings = dataSettings["settings"];
+    json variables = dataVariables["variables"];
 
     UA_Client *client = InitClient();
 
-    json::value varOut;
+    json varOut;
 
     while (running)
     {
         retval = UA_Client_connectUsername(client,
-                                           (settings["address"].as_string().c_str()),
-                                           (settings["login"].as_string().c_str()),
-                                           (settings["password"]).as_string().c_str());
+                                           ((string)settings[0]["address"]).c_str(),
+                                           ((string)settings[0]["login"]).c_str(),
+                                           ((string)settings[0]["password"]).c_str());
 
         // retval = UA_Client_connect(client, ((string)settings[0]["address"]).c_str());
         if (retval == UA_STATUSCODE_BADCONNECTIONCLOSED)
@@ -59,7 +58,7 @@ int main()
                         UA_Variant newValue;
                         UA_Variant value = readResponse.results[0].value;
 
-                        if (name == variables[k]["name"].as_string().c_str())
+                        if (name == variables[k]["name"])
                         {
                             CreateVariant(variables[k], &newValue);
                             retval = UA_Client_writeValueAttribute(client, nodeId, &newValue);
@@ -69,6 +68,7 @@ int main()
                             continue;
                         }
 
+                        std::cout << varOut.dump() << std::endl;
                         VariantToJson(varOut[UastrToCharArr(ref->displayName.text)], value);
                         count++;
                     }
@@ -79,16 +79,16 @@ int main()
                     UA_Variant newValue;
                     UA_Variant_init(&newValue);
                     CreateVariable(client,
-                                   variables[k]["name"].as_string().c_str(),
+                                   ((string)variables[k]["name"]).c_str(),
                                    variables[k], &newValue);
-                    //varOut[count]["value"] = variables[k]["value"];
+                    //varOut[variables[k]["name"]] = variables[k]["value"];
                     count++;
                 }
                 findIndex = -1;
             }
         }
-		
-		cout << varOut.serialize() << endl;
+
+        std::cout << varOut.dump() << std::endl;
         UA_sleep_ms(1000);
     };
 

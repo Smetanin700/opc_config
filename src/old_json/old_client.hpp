@@ -8,11 +8,10 @@
 #include <fstream>
 #include <iostream>
 
-#include <cpprest/json.h>
+#include "../include/json.hpp"
 
+using json = nlohmann::json;
 using namespace std;
-using namespace web;
-using namespace web::json;
 
 UA_Boolean running = true;
 UA_StatusCode retval;
@@ -77,13 +76,13 @@ inline UA_ReadResponse ReadResponse(UA_Client *client, UA_NodeId nodeId)
 /*
 Получение типа переменной в json 
 */
-inline DataType GetTypeJson(json::value value)
+inline DataType GetTypeJson(json value)
 {
-    if (value["value"].is_double())
+    if (value["value"].is_number_float())
         return DOUBLE;
     else if (value["value"].is_boolean())
         return BOOL;
-    else if (value["value"].is_integer())
+    else if (value["value"].is_number_integer())
         return INT32;
     else if (value["value"].is_string())
         return STRING;
@@ -118,7 +117,7 @@ inline void GetDataType(DataType type, UA_DataType nodeType)
 /*
 Получение типа переменной open62541
 */
-inline void GetDataType(json::value value, UA_DataType nodeType)
+inline void GetDataType(json value, UA_DataType nodeType)
 {
     switch (GetTypeJson(value))
     {
@@ -142,31 +141,31 @@ inline void GetDataType(json::value value, UA_DataType nodeType)
 /*
 Создание универсальной переменной для open62541
 */
-inline void CreateVariant(json::value value, UA_Variant *variant)
+inline void CreateVariant(json value, UA_Variant *variant)
 {
     switch (GetTypeJson(value))
     {
     case INT32:
     {
-        UA_Int32 intval = value["value"].as_integer();
+        UA_Int32 intval = value["value"];
         UA_Variant_setScalar(variant, &intval, &UA_TYPES[UA_TYPES_INT32]);
         break;
     }
     case DOUBLE:
     {
-        UA_Double doubleval = value["value"].as_double();
+        UA_Double doubleval = value["value"];
         UA_Variant_setScalar(variant, &doubleval, &UA_TYPES[UA_TYPES_DOUBLE]);
         break;
     }
     case STRING:
     {
-        UA_String strval = UA_String_fromChars((value["value"].as_string()).c_str());
+        UA_String strval = UA_String_fromChars(((string)value["value"]).c_str());
         UA_Variant_setScalar(variant, &strval, &UA_TYPES[UA_TYPES_STRING]);
         break;
     }
     case BOOL:
     {
-        UA_Boolean boolval = value["value"].as_bool();
+        UA_Boolean boolval = value["value"];
         UA_Variant_setScalar(variant, &boolval, &UA_TYPES[UA_TYPES_BOOLEAN]);
         break;
     }
@@ -178,22 +177,22 @@ inline void CreateVariant(json::value value, UA_Variant *variant)
 /*
 Создание переменной на сервере
 */
-inline void CreateVariable(UA_Client *client, const char *name, json::value value, UA_Variant *variant)
+inline void CreateVariable(UA_Client *client, const char *name, json value, UA_Variant *variant)
 {
     UA_VariableAttributes attr = UA_VariableAttributes_default;
     attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-    //attr.displayName = UA_LOCALIZEDTEXT("en-US", "name");
+    attr.displayName = UA_LOCALIZEDTEXT("en-US", "name");
     // UA_DataType nodeType;
     // GetDataType(value, nodeType);
     // CreateVariant(value, variant);
     // attr.dataType = nodeType.typeId;
     attr.valueRank = -1;
     // UA_Variant_setScalar(&attr.value, variant, &nodeType);
-    UA_NodeId varNodeId = UA_NODEID_STRING(1, "name123");
+    UA_NodeId varNodeId = UA_NODEID_STRING(1, "name");
     retval = UA_Client_addVariableNode(client, varNodeId,
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                                       UA_QUALIFIEDNAME(1, "name123"),
+                                       UA_QUALIFIEDNAME(1, "name"),
                                        UA_NODEID_NULL,
                                        attr, NULL);
 }
@@ -211,22 +210,22 @@ inline char *UastrToCharArr(UA_String uastr)
 /*
 Запись UA_Variant в json
 */
-inline void VariantToJson(json::value value, UA_Variant variant)
+inline void VariantToJson(json js, UA_Variant variant)
 {
     if(variant.type == &UA_TYPES[UA_TYPES_DOUBLE]){
         UA_Double val = *(UA_Double *)variant.data;        
-        value["value"] = json::value::number(val);
+        js = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_INT32]){
         UA_Int32 val = *(UA_Int32 *)variant.data;
-        value["value"] = json::value::number(val);
+        js = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]){
         UA_Boolean val = *(UA_Boolean *)variant.data;
-        value["value"] = json::value::boolean(val);
+        js = val;
     }
     if(variant.type == &UA_TYPES[UA_TYPES_STRING]){
         UA_String val = *(UA_String *)variant.data;
-        value["value"] = json::value::string(UastrToCharArr(val));
+        js = UastrToCharArr(val);
     }
 }

@@ -49,8 +49,8 @@ int main(void)
     attr2.dataType = UA_TYPES[UA_TYPES_DOUBLE].typeId;
     attr2.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
     UA_Variant_setScalar(&attr2.value, &variable2, &UA_TYPES[UA_TYPES_DOUBLE]);
-    UA_QualifiedName var2Name = UA_QUALIFIEDNAME(1, "Variable2");
-    UA_NodeId var2NodeId = UA_NODEID_STRING(1, "Variable2");
+    UA_QualifiedName var2Name = UA_QUALIFIEDNAME(1, "variable 1");
+    UA_NodeId var2NodeId = UA_NODEID_STRING(1, "variable 1");
     UA_Server_addVariableNode(server, var2NodeId,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                               UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
