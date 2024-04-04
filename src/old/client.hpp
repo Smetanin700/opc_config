@@ -29,13 +29,6 @@ typedef enum
     NONETYPE = 0
 } DataType;
 
-struct NodeData
-{
-    UA_NodeId nodeId;
-    UA_Variant value;
-    string name;
-};
-
 static void stopHandler(int sign)
 {
     running = 0;
@@ -147,9 +140,9 @@ inline void GetDataType(json::value value, UA_DataType nodeType)
 }
 
 /*
-Запись данных в универсальную переменную для open62541
+Создание универсальной переменной для open62541
 */
-inline void WriteVariant(json::value value, UA_Variant *variant)
+inline void CreateVariant(json::value value, UA_Variant *variant)
 {
     switch (GetTypeJson(value))
     {
@@ -185,7 +178,7 @@ inline void WriteVariant(json::value value, UA_Variant *variant)
 /*
 Создание переменной на сервере
 */
-inline void CreateVariable(UA_Client *client, char *name, json::value value, UA_Variant *variant)
+inline void CreateVariable(UA_Client *client, const char *name, json::value value, UA_Variant *variant)
 {
     UA_VariableAttributes attr = UA_VariableAttributes_default;
     attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
@@ -196,11 +189,11 @@ inline void CreateVariable(UA_Client *client, char *name, json::value value, UA_
     // attr.dataType = nodeType.typeId;
     attr.valueRank = -1;
     // UA_Variant_setScalar(&attr.value, variant, &nodeType);
-    UA_NodeId varNodeId = UA_NODEID_STRING(1, name);
+    UA_NodeId varNodeId = UA_NODEID_STRING(1, "name123");
     retval = UA_Client_addVariableNode(client, varNodeId,
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                                       UA_QUALIFIEDNAME(1, name),
+                                       UA_QUALIFIEDNAME(1, "name123"),
                                        UA_NODEID_NULL,
                                        attr, NULL);
 }
@@ -218,25 +211,21 @@ inline char *UastrToCharArr(UA_String uastr)
 /*
 Запись UA_Variant в json
 */
-inline void VariantToJson(json::value &value, UA_Variant variant)
+inline void VariantToJson(json::value value, UA_Variant variant)
 {
     if(variant.type == &UA_TYPES[UA_TYPES_DOUBLE]){
-        cout << "double" << endl;
         UA_Double val = *(UA_Double *)variant.data;        
         value["value"] = json::value::number(val);
     }
     if(variant.type == &UA_TYPES[UA_TYPES_INT32]){
-        cout << "int" << endl;
         UA_Int32 val = *(UA_Int32 *)variant.data;
         value["value"] = json::value::number(val);
     }
     if(variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]){
-        cout << "bool" << endl;
         UA_Boolean val = *(UA_Boolean *)variant.data;
         value["value"] = json::value::boolean(val);
     }
     if(variant.type == &UA_TYPES[UA_TYPES_STRING]){
-        cout << "string" << endl;
         UA_String val = *(UA_String *)variant.data;
         value["value"] = json::value::string(UastrToCharArr(val));
     }
