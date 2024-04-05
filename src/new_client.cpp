@@ -14,13 +14,13 @@ int main()
 
     json::value varOut;
 
-    // retval = UA_Client_connectUsername(client,
-    //                                     (settings["address"].as_string().c_str()),
-    //                                     (settings["login"].as_string().c_str()),
-    //                                     (settings["password"]).as_string().c_str());
+    retval = UA_Client_connectUsername(client,
+                                        (settings["address"].as_string().c_str()),
+                                        (settings["login"].as_string().c_str()),
+                                        (settings["password"]).as_string().c_str());
 
-    while (retval != UA_STATUSCODE_GOOD)
-    retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
+    // while (retval != UA_STATUSCODE_GOOD)
+    // retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
 
     if (retval != UA_STATUSCODE_GOOD)
     {
