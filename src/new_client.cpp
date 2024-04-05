@@ -14,14 +14,31 @@ int main()
 
     json::value varOut;
 
-    retval = UA_Client_connectUsername(client,
-                                        (settings["address"].as_string().c_str()),
-                                        (settings["login"].as_string().c_str()),
-                                        (settings["password"]).as_string().c_str());
+    // retval = UA_Client_connectUsername(client,
+    //                                     (settings["address"].as_string().c_str()),
+    //                                     (settings["login"].as_string().c_str()),
+    //                                     (settings["password"]).as_string().c_str());
+
+    while (retval != UA_STATUSCODE_GOOD)
+    retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
+
+    if (retval != UA_STATUSCODE_GOOD)
+    {
+        cout << "Bad conection: " << retval << endl;        
+        UA_Client_delete(client);
+        return 1;
+    }
 
     UA_BrowseResponse response = GetResponse(client);
     int count = 0;
     json::value jsonOutput;
+    if (response.resultsSize == 0)
+    {
+        cout << "No result" << endl;
+        UA_Client_delete(client);
+        return 1;
+    }
+
     NodeData vars[response.results[0].referencesSize];
 
     for (size_t j = 0; j < response.results[0].referencesSize; ++j)
@@ -63,6 +80,8 @@ int main()
     UA_Client_delete(client);
 
     cout << jsonOutput.serialize() << endl;
+    cout << response.resultsSize << ' ' << response.results[0].referencesSize << endl;
+
 
     return EXIT_SUCCESS;
 }

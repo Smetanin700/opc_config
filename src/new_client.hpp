@@ -15,7 +15,7 @@ using namespace web;
 using namespace web::json;
 
 UA_Boolean running = true;
-UA_StatusCode retval;
+UA_StatusCode retval = UA_STATUSCODE_BAD;
 
 char *clientJson = "../configs/client_test.json";
 char *variableJson = "../configs/variable_test.json";
@@ -240,4 +240,5 @@ inline void VariantToJson(json::value &value, UA_Variant variant)
         UA_String val = *(UA_String *)variant.data;
         value["value"] = json::value::string(UastrToCharArr(val));
     }
+    cout << "Var type: " << UA_Variant_isScalar(&variant) << endl;
 }
