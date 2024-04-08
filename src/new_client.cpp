@@ -14,13 +14,15 @@ int main()
 
     json::value varOut;
 
-    retval = UA_Client_connectUsername(client,
-                                        (settings["address"].as_string().c_str()),
-                                        (settings["login"].as_string().c_str()),
-                                        (settings["password"]).as_string().c_str());
-
-    // while (retval != UA_STATUSCODE_GOOD)
-    // retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
+    while (retval != UA_STATUSCODE_GOOD)
+    {
+        retval = UA_Client_connectUsername(client,
+                                            (settings["address"].as_string().c_str()),
+                                            (settings["login"].as_string().c_str()),
+                                            (settings["password"]).as_string().c_str());
+        
+        // retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
+    }
 
     if (retval != UA_STATUSCODE_GOOD)
     {
@@ -55,33 +57,45 @@ int main()
             vars[count].value = readResponse.results[0].value;
             jsonOutput[count]["name"] = json::value::string(vars[count].name);
             VariantToJson(jsonOutput[count], vars[count].value);
-
             count++;
         }
     }
 
-    // for (int i = 0; i < variables.size(); i++)
-    // {
-    //     for (int j = 0; j < count; j++) 
-    //     {
-    //         if (variables[i]["name"].as_string() == vars[j].name)
-    //         {
-    //             WriteVariant(variables[i], &vars[j].value);
-    //             UA_Client_writeValueAttribute(client, vars[j].nodeId, &vars[j].value);
-    //             continue;
-    //         }
+    int length = count;
+    bool find;
+    for (int i = 0; i < variables.size(); i++)
+    {
+        find = false;
+        for (int j = 0; j < length; j++) 
+        {
+            if (variables[i]["name"].as_string() == vars[j].name)
+            {
+                WriteVariant(variables[i], &vars[j].value);
+                UA_Client_writeValueAttribute(client, vars[j].nodeId, &vars[j].value);
+                for (int k = 0; k < jsonOutput.size(); k++)
+                    if(jsonOutput[k]["name"].as_string() == variables[i]["name"].as_string())
+                        jsonOutput[k]["value"] = variables[i]["value"];
+                count++;
+                find = true;
+                break;
+            }
+        }
 
-    //         UA_Variant newValue;
-    //         UA_Variant_init(&newValue);
-    //         CreateVariable(client, (char *)variables[i]["name"].as_string().c_str(), variables[i], &newValue);
-    //     }
-    // }
+        if (!find)
+        {
+            UA_Variant newValue;
+            UA_Variant_init(&newValue);
+            CreateVariable(client, (char *)variables[i]["name"].as_string().c_str(), variables[i], &newValue);
+            jsonOutput[count]["name"] = variables[i]["name"];
+            jsonOutput[count]["value"] = variables[i]["value"];
+            count++;
+        }
+    }
 
     UA_Client_delete(client);
 
     cout << jsonOutput.serialize() << endl;
-    cout << response.resultsSize << ' ' << response.results[0].referencesSize << endl;
-
+    cout << response.results[0].referencesSize << endl;
 
     return EXIT_SUCCESS;
 }

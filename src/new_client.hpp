@@ -189,20 +189,17 @@ inline void CreateVariable(UA_Client *client, char *name, json::value value, UA_
 {
     UA_VariableAttributes attr = UA_VariableAttributes_default;
     attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-    //attr.displayName = UA_LOCALIZEDTEXT("en-US", "name");
-    // UA_DataType nodeType;
-    // GetDataType(value, nodeType);
-    // CreateVariant(value, variant);
-    // attr.dataType = nodeType.typeId;
     attr.valueRank = -1;
-    // UA_Variant_setScalar(&attr.value, variant, &nodeType);
     UA_NodeId varNodeId = UA_NODEID_STRING(1, name);
+    UA_NodeId newNode;
     retval = UA_Client_addVariableNode(client, varNodeId,
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
                                        UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
                                        UA_QUALIFIEDNAME(1, name),
                                        UA_NODEID_NULL,
-                                       attr, NULL);
+                                       attr, &newNode);
+    WriteVariant(value, variant);
+    retval = UA_Client_writeValueAttribute(client, newNode, variant);
 }
 
 /*
@@ -240,5 +237,4 @@ inline void VariantToJson(json::value &value, UA_Variant variant)
         UA_String val = *(UA_String *)variant.data;
         value["value"] = json::value::string(UastrToCharArr(val));
     }
-    cout << "Var type: " << UA_Variant_isScalar(&variant) << endl;
 }
