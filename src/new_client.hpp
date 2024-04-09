@@ -1,12 +1,17 @@
+#define UA_ENABLE_ENCRYPTION_OPENSSL
+
 #include <open62541/client_config_default.h>
 #include <open62541/client_highlevel.h>
 #include <open62541/plugin/log_stdout.h>
+#include <open62541/plugin/securitypolicy.h>
+#include <open62541/plugin/securitypolicy_default.h>
+#include <open62541/plugin/accesscontrol_default.h>
 
 #include <signal.h>
 #include <stdlib.h>
-
 #include <fstream>
 #include <iostream>
+#include "../include/common.h"
 
 #include <cpprest/json.h>
 
@@ -48,7 +53,9 @@ inline UA_Client *InitClient()
 {
     UA_Client *client = UA_Client_new();               
     UA_ClientConfig *cc = UA_Client_getConfig(client); 
-    UA_ClientConfig_setDefault(cc);    
+    UA_ClientConfig_setDefault(cc);
+    // cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
+    // UA_SecurityPolicy_Basic256Sha256(&cc->securityPolicies[0], loadFile("/home/user/certificate.crt"), loadFile("/home/user/private.key"), NULL);
     cc->timeout = 1000;
     return client;
 }

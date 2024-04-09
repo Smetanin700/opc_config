@@ -1,9 +1,22 @@
+/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
+ * See http://creativecommons.org/publicdomain/zero/1.0/ for more information. */
+
+/**
+ * Adding Variables to a Server
+ * ----------------------------
+ *
+ * This tutorial shows how to work with data types and how to add variable nodes
+ * to a server. First, we add a new variable to the server. Take a look at the
+ * definition of the ``UA_VariableAttributes`` structure to see the list of all
+ * attributes defined for VariableNodes.
+ *
+ * Note that the default settings have the AccessLevel of the variable value as
+ * read only. See below for making the variable writable.
+ */
+
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/server.h>
-#include <open62541/server_config_default.h>
-
-#include <signal.h>
-#include <stdlib.h>
+#include <stdio.h>
 
 static void
 addVariable(UA_Server *server) {
@@ -24,6 +37,35 @@ addVariable(UA_Server *server) {
     UA_Server_addVariableNode(server, myIntegerNodeId, parentNodeId,
                               parentReferenceNodeId, myIntegerName,
                               UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE), attr, NULL, NULL);
+}
+
+static void
+addMatrixVariable(UA_Server *server) {
+    UA_VariableAttributes attr = UA_VariableAttributes_default;
+    attr.displayName = UA_LOCALIZEDTEXT("en-US", "Double Matrix");
+    attr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
+
+    /* Set the variable value constraints */
+    attr.dataType = UA_TYPES[UA_TYPES_DOUBLE].typeId;
+    attr.valueRank = UA_VALUERANK_TWO_DIMENSIONS;
+    UA_UInt32 arrayDims[2] = {2,2};
+    attr.arrayDimensions = arrayDims;
+    attr.arrayDimensionsSize = 2;
+
+    /* Set the value. The array dimensions need to be the same for the value. */
+    UA_Double zero[4] = {0.0, 0.0, 0.0, 0.0};
+    UA_Variant_setArray(&attr.value, zero, 4, &UA_TYPES[UA_TYPES_DOUBLE]);
+    attr.value.arrayDimensions = arrayDims;
+    attr.value.arrayDimensionsSize = 2;
+
+    UA_NodeId myIntegerNodeId = UA_NODEID_STRING(1, "double.matrix");
+    UA_QualifiedName myIntegerName = UA_QUALIFIEDNAME(1, "double matrix");
+    UA_NodeId parentNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER);
+    UA_NodeId parentReferenceNodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES);
+    UA_Server_addVariableNode(server, myIntegerNodeId, parentNodeId,
+                              parentReferenceNodeId, myIntegerName,
+                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+                              attr, NULL, NULL);
 }
 
 /**
@@ -61,31 +103,37 @@ writeVariable(UA_Server *server) {
     UA_Server_write(server, &wv);
 }
 
-/** It follows the main server code, making use of the above definitions. */
+/**
+ * Note how we initially set the DataType attribute of the variable node to the
+ * NodeId of the Int32 data type. This forbids writing values that are not an
+ * Int32. The following code shows how this consistency check is performed for
+ * every write.
+ */
 
-static volatile UA_Boolean running = true;
-static void stopHandler(int sign) {
-    UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
-    running = false;
+static void
+writeWrongVariable(UA_Server *server) {
+    UA_NodeId myIntegerNodeId = UA_NODEID_STRING(1, "the.answer");
+
+    /* Write a string */
+    UA_String myString = UA_STRING("test");
+    UA_Variant myVar;
+    UA_Variant_init(&myVar);
+    UA_Variant_setScalar(&myVar, &myString, &UA_TYPES[UA_TYPES_STRING]);
+    UA_StatusCode retval = UA_Server_writeValue(server, myIntegerNodeId, myVar);
+    printf("Writing a string returned statuscode %s\n", UA_StatusCode_name(retval));
 }
 
-int main(void) {
-    signal(SIGINT, stopHandler);
-    signal(SIGTERM, stopHandler);
+/** It follows the main server code, making use of the above definitions. */
 
+int main(void) {
     UA_Server *server = UA_Server_new();
-    UA_ServerConfig_setDefault(UA_Server_getConfig(server));
-    UA_ServerConfig* config = UA_Server_getConfig(server);
-    config->verifyRequestTimestamp = UA_RULEHANDLING_ACCEPT;
-#ifdef UA_ENABLE_WEBSOCKET_SERVER
-    UA_ServerConfig_addNetworkLayerWS(UA_Server_getConfig(server), 7681, 0, 0, NULL, NULL);
-#endif
 
     addVariable(server);
+    addMatrixVariable(server);
     writeVariable(server);
+    writeWrongVariable(server);
 
-    UA_StatusCode retval = UA_Server_run(server, &running);
-
+    UA_Server_runUntilInterrupt(server);
     UA_Server_delete(server);
-    return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
+    return 0;
 }

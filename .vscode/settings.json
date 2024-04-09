@@ -69,6 +69,8 @@
     "cinttypes": "cpp",
     "typeinfo": "cpp",
     "valarray": "cpp",
-    "log_stdout.h": "c"
+    "log_stdout.h": "c",
+    "common.h": "c",
+    "stdlib.h": "c"
   }
 }
