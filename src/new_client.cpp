@@ -17,12 +17,12 @@ int main()
     while (retval != UA_STATUSCODE_GOOD)
     {
         if (!running) return -1;
-        retval = UA_Client_connectUsername(client,
-                                            (settings["address"].as_string().c_str()),
-                                            (settings["login"].as_string().c_str()),
-                                            (settings["password"]).as_string().c_str());
+        // retval = UA_Client_connectUsername(client,
+        //                                     (settings["address"].as_string().c_str()),
+        //                                     (settings["login"].as_string().c_str()),
+        //                                     (settings["password"]).as_string().c_str());
         
-        // retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
+        retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
         sleep_ms(1000);
     }
 
@@ -33,19 +33,26 @@ int main()
         return 1;
     }
 
-    UA_BrowseResponse response = GetResponse(client);
+    UA_BrowseResponse response = GetResponse(client, UA_NS0ID_OBJECTSFOLDER);
+
     int count = 0;
     json::value jsonOutput;
+
     if (response.resultsSize == 0)
     {
         cout << "No result" << endl;
-        UA_Client_delete(client);
-        return 1;
+        //UA_Client_delete(client);
+        //return 1;
     }
 
-    NodeData vars[response.results[0].referencesSize];
+    int size = 0;
 
-    for (size_t j = 0; j < response.results[0].referencesSize; ++j)
+    if (response.resultsSize > 0)
+        size = response.results[0].referencesSize;
+
+    NodeData vars[size];
+
+    for (size_t j = 0; j < size; ++j)
     {
         UA_ReferenceDescription *ref = &(response.results[0].references[j]);
         if (ref->nodeClass != UA_NODECLASS_VARIABLE) { continue; } // Пропускаем не переменные
@@ -97,7 +104,7 @@ int main()
     UA_Client_delete(client);
 
     cout << jsonOutput.serialize() << endl;
-    cout << response.results[0].referencesSize << endl;
+    cout << size << endl;
 
     return EXIT_SUCCESS;
 }

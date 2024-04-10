@@ -77,7 +77,7 @@ inline UA_ReadResponse ReadResponse(UA_Client *client, UA_NodeId nodeId)
 /*
 Получение типа переменной в json 
 */
-inline DataType GetTypeJson(json::value value)
+inline DataType GetJsonType(json::value value)
 {
     if (value["value"].is_double())
         return DOUBLE;
@@ -120,7 +120,7 @@ inline void GetDataType(DataType type, UA_DataType nodeType)
 */
 inline void GetDataType(json::value value, UA_DataType nodeType)
 {
-    switch (GetTypeJson(value))
+    switch (GetJsonType(value))
     {
     case INT32:
         nodeType = UA_TYPES[UA_TYPES_INT32];
@@ -144,7 +144,7 @@ inline void GetDataType(json::value value, UA_DataType nodeType)
 */
 inline void CreateVariant(json::value value, UA_Variant *variant)
 {
-    switch (GetTypeJson(value))
+    switch (GetJsonType(value))
     {
     case INT32:
     {

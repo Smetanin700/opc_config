@@ -53,9 +53,17 @@ inline UA_Client *InitClient()
 {
     UA_Client *client = UA_Client_new();               
     UA_ClientConfig *cc = UA_Client_getConfig(client); 
-    UA_ClientConfig_setDefault(cc);
-    // cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
-    // UA_SecurityPolicy_Basic256Sha256(&cc->securityPolicies[0], loadFile("/home/user/certificate.crt"), loadFile("/home/user/private.key"), NULL);
+    UA_ByteString cert = loadFile("../client_cert.der");
+    UA_ByteString key = loadFile("../client_key.der");
+    //UA_ClientConfig_setDefault(cc);
+    cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
+    UA_String_clear(&cc->clientDescription.applicationUri);
+    cc->clientDescription.applicationUri = UA_STRING_ALLOC("urn:open62541.server.application");
+    retval = UA_ClientConfig_setDefaultEncryption(cc, cert, key,
+                                         NULL, 0,
+                                         NULL, 0);
+    UA_SecurityPolicy_Basic256Sha256(&cc->securityPolicies[0], cert, key, &UA_Log_Stdout_);
+    cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
     cc->timeout = 1000;
     return client;
 }
@@ -63,14 +71,14 @@ inline UA_Client *InitClient()
 /*
 Отправка запроса на получение переменных сервера
 */
-inline UA_BrowseResponse GetResponse(UA_Client *client) 
+inline UA_BrowseResponse GetResponse(UA_Client *client, int identifier) 
 {
     UA_BrowseRequest request;
     UA_BrowseRequest_init(&request);
     request.nodesToBrowse = UA_BrowseDescription_new();
     request.nodesToBrowseSize = 1;
-    request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); 
-    request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;                  
+    request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, identifier); 
+    request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;    
     return UA_Client_Service_browse(client, request);
 }
 
@@ -91,7 +99,7 @@ inline UA_ReadResponse ReadResponse(UA_Client *client, UA_NodeId nodeId)
 /*
 Получение типа переменной в json 
 */
-inline DataType GetTypeJson(json::value value)
+inline DataType GetJsonType(json::value value)
 {
     if (value["value"].is_double())
         return DOUBLE;
@@ -134,7 +142,7 @@ inline void GetDataType(DataType type, UA_DataType nodeType)
 */
 inline void GetDataType(json::value value, UA_DataType nodeType)
 {
-    switch (GetTypeJson(value))
+    switch (GetJsonType(value))
     {
     case INT32:
         nodeType = UA_TYPES[UA_TYPES_INT32];
@@ -158,7 +166,7 @@ inline void GetDataType(json::value value, UA_DataType nodeType)
 */
 inline void WriteVariant(json::value value, UA_Variant *variant)
 {
-    switch (GetTypeJson(value))
+    switch (GetJsonType(value))
     {
     case INT32:
     {
