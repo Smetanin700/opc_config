@@ -11,18 +11,20 @@ int main()
 	json::value variables = json::value::parse(fv)["variables"];
 	
     UA_Client *client = InitClient();
+    // UA_Client *client = InitSecureClient();
 
     json::value varOut;
 
+    retval = UA_STATUSCODE_BAD;
     while (retval != UA_STATUSCODE_GOOD)
     {
         if (!running) return -1;
-        // retval = UA_Client_connectUsername(client,
-        //                                     (settings["address"].as_string().c_str()),
-        //                                     (settings["login"].as_string().c_str()),
-        //                                     (settings["password"]).as_string().c_str());
+        retval = UA_Client_connectUsername(client,
+                                            (settings["address"].as_string().c_str()),
+                                            (settings["login"].as_string().c_str()),
+                                            (settings["password"]).as_string().c_str());
         
-        retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
+        // retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
         sleep_ms(1000);
     }
 
@@ -41,8 +43,6 @@ int main()
     if (response.resultsSize == 0)
     {
         cout << "No result" << endl;
-        //UA_Client_delete(client);
-        //return 1;
     }
 
     int size = 0;
@@ -55,6 +55,10 @@ int main()
     for (size_t j = 0; j < size; ++j)
     {
         UA_ReferenceDescription *ref = &(response.results[0].references[j]);
+        // if (ref->nodeClass == UA_NODECLASS_OBJECT) 
+        // {
+        //     UA_BrowseResponse resp = GetResponseFromNode(client, ref->nodeId.nodeId);
+        // }        
         if (ref->nodeClass != UA_NODECLASS_VARIABLE) { continue; } // Пропускаем не переменные
 
         UA_NodeId nodeId = ref->nodeId.nodeId;

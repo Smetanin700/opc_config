@@ -71,6 +71,7 @@
     "valarray": "cpp",
     "log_stdout.h": "c",
     "common.h": "c",
-    "stdlib.h": "c"
+    "stdlib.h": "c",
+    "securitypolicy.h": "c"
   }
 }

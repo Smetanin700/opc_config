@@ -53,18 +53,36 @@ inline UA_Client *InitClient()
 {
     UA_Client *client = UA_Client_new();               
     UA_ClientConfig *cc = UA_Client_getConfig(client); 
+    UA_ClientConfig_setDefault(cc);
+    return client;
+}
+
+/*
+Создание защищенного клиента
+*/
+inline UA_Client *InitSecureClient()
+{
     UA_ByteString cert = loadFile("../client_cert.der");
     UA_ByteString key = loadFile("../client_key.der");
-    //UA_ClientConfig_setDefault(cc);
+
+    UA_Client *client = UA_Client_new();
+
+    UA_ClientConfig* cc = UA_Client_getConfig(client);
+
+    // Set to default config with no trust and issuer list
+    UA_ClientConfig_setDefaultEncryption(cc, cert, key, NULL, 0, NULL, 0);
+
+    // Set securityMode and securityPolicyUri
+    UA_ByteString_clear(&cc->securityPolicyUri);
     cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
+    cc->securityPolicyUri = UA_String_fromChars("http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256");
+
+    // Set uri and client type
+    UA_ApplicationDescription_clear(&cc->clientDescription);
     UA_String_clear(&cc->clientDescription.applicationUri);
-    cc->clientDescription.applicationUri = UA_STRING_ALLOC("urn:open62541.server.application");
-    retval = UA_ClientConfig_setDefaultEncryption(cc, cert, key,
-                                         NULL, 0,
-                                         NULL, 0);
-    UA_SecurityPolicy_Basic256Sha256(&cc->securityPolicies[0], cert, key, &UA_Log_Stdout_);
-    cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
-    cc->timeout = 1000;
+    cc->clientDescription.applicationUri = UA_STRING_ALLOC("urn:OpcPlc:f9f52d460f6a");
+    cc->clientDescription.applicationType = UA_APPLICATIONTYPE_CLIENT;
+
     return client;
 }
 
@@ -78,6 +96,20 @@ inline UA_BrowseResponse GetResponse(UA_Client *client, int identifier)
     request.nodesToBrowse = UA_BrowseDescription_new();
     request.nodesToBrowseSize = 1;
     request.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, identifier); 
+    request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;    
+    return UA_Client_Service_browse(client, request);
+}
+
+/*
+Отправка запроса на получение переменных сервера
+*/
+inline UA_BrowseResponse GetResponseFromNode(UA_Client *client, UA_NodeId node) 
+{
+    UA_BrowseRequest request;
+    UA_BrowseRequest_init(&request);
+    request.nodesToBrowse = UA_BrowseDescription_new();
+    request.nodesToBrowseSize = 1;
+    request.nodesToBrowse[0].nodeId = node; 
     request.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL;    
     return UA_Client_Service_browse(client, request);
 }
