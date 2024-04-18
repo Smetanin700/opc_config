@@ -10,8 +10,8 @@ int main()
     ifstream fv(variableJson);
 	json::value variables = json::value::parse(fv)["variables"];
 	
-    UA_Client *client = InitClient();
-    // UA_Client *client = InitSecureClient();
+    //UA_Client *client = InitClient();
+    UA_Client *client = InitSecureClient();
 
     json::value varOut;
 
@@ -19,12 +19,12 @@ int main()
     while (retval != UA_STATUSCODE_GOOD)
     {
         if (!running) return -1;
-        retval = UA_Client_connectUsername(client,
-                                            (settings["address"].as_string().c_str()),
-                                            (settings["login"].as_string().c_str()),
-                                            (settings["password"]).as_string().c_str());
+        // retval = UA_Client_connectUsername(client,
+        //                                     ((settings["address"].as_string() + ":" + settings["port"].as_string()).c_str()),
+        //                                     (settings["login"].as_string().c_str()),
+        //                                     (settings["password"]).as_string().c_str());
         
-        // retval = UA_Client_connect(client, (settings["address"].as_string().c_str()));
+        retval = UA_Client_connect(client, ((settings["address"].as_string() + ":" + settings["port"].as_string()).c_str()));
         sleep_ms(1000);
     }
 
@@ -74,36 +74,36 @@ int main()
         }
     }
 
-    int length = count;
-    bool find;
-    for (int i = 0; i < variables.size(); i++)
-    {
-        find = false;
-        for (int j = 0; j < length; j++) 
-        {
-            if (variables[i]["name"].as_string() == vars[j].name)
-            {
-                WriteVariant(variables[i], &vars[j].value);
-                UA_Client_writeValueAttribute(client, vars[j].nodeId, &vars[j].value);
-                for (int k = 0; k < jsonOutput.size(); k++)
-                    if(jsonOutput[k]["name"].as_string() == variables[i]["name"].as_string())
-                        jsonOutput[k]["value"] = variables[i]["value"];
-                count++;
-                find = true;
-                break;
-            }
-        }
+    // int length = count;
+    // bool find;
+    // for (int i = 0; i < variables.size(); i++)
+    // {
+    //     find = false;
+    //     for (int j = 0; j < length; j++) 
+    //     {
+    //         if (variables[i]["name"].as_string() == vars[j].name)
+    //         {
+    //             WriteVariant(variables[i], &vars[j].value);
+    //             UA_Client_writeValueAttribute(client, vars[j].nodeId, &vars[j].value);
+    //             for (int k = 0; k < jsonOutput.size(); k++)
+    //                 if(jsonOutput[k]["name"].as_string() == variables[i]["name"].as_string())
+    //                     jsonOutput[k]["value"] = variables[i]["value"];
+    //             count++;
+    //             find = true;
+    //             break;
+    //         }
+    //     }
 
-        if (!find)
-        {
-            UA_Variant newValue;
-            UA_Variant_init(&newValue);
-            CreateVariable(client, (char *)variables[i]["name"].as_string().c_str(), variables[i], &newValue);
-            jsonOutput[count]["name"] = variables[i]["name"];
-            jsonOutput[count]["value"] = variables[i]["value"];
-            count++;
-        }
-    }
+    //     if (!find)
+    //     {
+    //         UA_Variant newValue;
+    //         UA_Variant_init(&newValue);
+    //         CreateVariable(client, (char *)variables[i]["name"].as_string().c_str(), variables[i], &newValue);
+    //         jsonOutput[count]["name"] = variables[i]["name"];
+    //         jsonOutput[count]["value"] = variables[i]["value"];
+    //         count++;
+    //     }
+    // }
 
     UA_Client_delete(client);
 

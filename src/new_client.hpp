@@ -46,6 +46,46 @@ static void stopHandler(int sign)
     running = 0;
 }
 
+
+static UA_INLINE UA_ByteString
+loadCert(const char *const data, size_t length) {
+    UA_ByteString fileContents = UA_STRING_NULL;
+
+    /* Get the file length, allocate the data and read */
+    fileContents.length = length;
+    fileContents.data = (UA_Byte *)data;
+
+    return fileContents;
+}
+
+////////////////////////////////////////////
+inline string GetByteString1()
+{
+    ifstream fin("../client_cert.der",ios_base::in|ios_base::binary);    
+    fin.seekg(0,ios_base::end);
+    size_t uSize = fin.tellg();
+    fin.seekg(0);
+
+    char* t = new char[uSize];
+    fin.read(t,uSize);
+
+    return string(t);
+}
+
+inline string GetByteString2()
+{
+    ifstream fin("../client_key.der",ios_base::in|ios_base::binary);
+    fin.seekg(0,ios_base::end);
+    size_t uSize = fin.tellg();
+    fin.seekg(0);
+
+    char* t = new char[uSize];
+    fin.read(t,uSize);
+
+    return string(t);
+}
+////////////////////////////////////
+
 /*
 Создание клиента
 */
@@ -62,8 +102,16 @@ inline UA_Client *InitClient()
 */
 inline UA_Client *InitSecureClient()
 {
-    UA_ByteString cert = loadFile("../client_cert.der");
-    UA_ByteString key = loadFile("../client_key.der");
+    ifstream fin("../client_cert.der",ios_base::in|ios_base::binary);    
+    fin.seekg(0,ios_base::end);
+    size_t uSize = fin.tellg();
+    fin.seekg(0);
+
+    char* t = new char[uSize];
+    fin.read(t,uSize);
+
+    UA_ByteString cert =  loadCert(t, uSize);
+    UA_ByteString key = loadFile("../client_key.der");  
 
     UA_Client *client = UA_Client_new();
 
