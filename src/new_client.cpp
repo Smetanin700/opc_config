@@ -10,7 +10,7 @@ int main()
     ifstream fv(variableJson);
 	json::value variables = json::value::parse(fv)["variables"];
 	
-    //UA_Client *client = InitClient();
+    // UA_Client *client = InitClient();
     UA_Client *client = InitSecureClient();
 
     json::value varOut;
@@ -19,13 +19,13 @@ int main()
     while (retval != UA_STATUSCODE_GOOD)
     {
         if (!running) return -1;
-        // retval = UA_Client_connectUsername(client,
-        //                                     ((settings["address"].as_string() + ":" + settings["port"].as_string()).c_str()),
-        //                                     (settings["login"].as_string().c_str()),
-        //                                     (settings["password"]).as_string().c_str());
+        retval = UA_Client_connectUsername(client,
+                                            ((settings["address"].as_string() + ":" + settings["port"].as_string()).c_str()),
+                                            (settings["login"].as_string().c_str()),
+                                            (settings["password"]).as_string().c_str());
         
-        retval = UA_Client_connect(client, ((settings["address"].as_string() + ":" + settings["port"].as_string()).c_str()));
-        sleep_ms(1000);
+        // retval = UA_Client_connect(client, ((settings["address"].as_string() + ":" + settings["port"].as_string()).c_str()));
+        sleep_ms(2000);
     }
 
     if (retval != UA_STATUSCODE_GOOD)

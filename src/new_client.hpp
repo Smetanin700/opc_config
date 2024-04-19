@@ -97,6 +97,7 @@ inline UA_Client *InitClient()
     return client;
 }
 
+
 /*
 Создание защищенного клиента
 */
@@ -123,12 +124,12 @@ inline UA_Client *InitSecureClient()
     // Set securityMode and securityPolicyUri
     UA_ByteString_clear(&cc->securityPolicyUri);
     cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
-    cc->securityPolicyUri = UA_String_fromChars("http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256");
+    cc->securityPolicyUri = UA_String_fromChars("http://opcfoundation.org/UA/SecurityPolicy#Basic256");
 
     // Set uri and client type
     UA_ApplicationDescription_clear(&cc->clientDescription);
     UA_String_clear(&cc->clientDescription.applicationUri);
-    cc->clientDescription.applicationUri = UA_STRING_ALLOC("urn:OpcPlc:f9f52d460f6a");
+    cc->clientDescription.applicationUri = UA_STRING_ALLOC("urn:open62541.server.application");
     cc->clientDescription.applicationType = UA_APPLICATIONTYPE_CLIENT;
 
     return client;
