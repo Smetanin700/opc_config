@@ -47,6 +47,16 @@ int main()
 
     int size = 0;
 
+
+    UA_UInt16 indx;
+    UA_String uri = UA_STRING_ALLOC("http://microsoft.com/Opc/OpcPlc/");
+    UA_Client_NamespaceGetIndex(client, &uri, &indx);
+    UA_NodeId nodeId = UA_NODEID_STRING(indx, "RandomSignedInt32");
+    UA_Variant value;
+    UA_Client_readValueAttribute(client, nodeId, &value);
+    VariantToJson(jsonOutput[count], value);
+    count++;
+
     if (response.resultsSize > 0)
         size = response.results[0].referencesSize;
 
@@ -57,7 +67,7 @@ int main()
         UA_ReferenceDescription *ref = &(response.results[0].references[j]);
         // if (ref->nodeClass == UA_NODECLASS_OBJECT) 
         // {
-        //     UA_BrowseResponse resp = GetResponseFromNode(client, ref->nodeId.nodeId);
+        //     UA_BrowseResponse resp = GetResponseFromNode(client, nodeId);
         // }        
         if (ref->nodeClass != UA_NODECLASS_VARIABLE) { continue; } // Пропускаем не переменные
 
