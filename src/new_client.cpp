@@ -10,9 +10,9 @@ int main()
     ifstream fv(variableJson);
 	json::value variables = json::value::parse(fv)["variables"];
 	
-    //UA_Client *client = InitClient();
+    // UA_Client *client = InitClient();
     UA_Client *client = InitSecureClient();
-
+    
     json::value varOut;
 
     retval = UA_STATUSCODE_BAD;
@@ -47,16 +47,6 @@ int main()
 
     int size = 0;
 
-
-    UA_UInt16 indx;
-    UA_String uri = UA_STRING_ALLOC("http://microsoft.com/Opc/OpcPlc/");
-    UA_Client_NamespaceGetIndex(client, &uri, &indx);
-    UA_NodeId nodeId = UA_NODEID_STRING(indx, "RandomSignedInt32");
-    UA_Variant value;
-    UA_Client_readValueAttribute(client, nodeId, &value);
-    VariantToJson(jsonOutput[count], value);
-    count++;
-
     if (response.resultsSize > 0)
         size = response.results[0].referencesSize;
 
@@ -83,6 +73,8 @@ int main()
             count++;
         }
     }
+
+    BrowsingVars(client);
 
     // int length = count;
     // bool find;

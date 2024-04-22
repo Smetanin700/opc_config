@@ -58,33 +58,33 @@ loadCert(const char *const data, size_t length) {
     return fileContents;
 }
 
-////////////////////////////////////////////
-inline string GetByteString1()
-{
-    ifstream fin("../client_cert.der",ios_base::in|ios_base::binary);    
-    fin.seekg(0,ios_base::end);
-    size_t uSize = fin.tellg();
-    fin.seekg(0);
+// ////////////////////////////////////////////
+// inline string GetByteString1()
+// {
+//     ifstream fin("../client_cert.der",ios_base::in|ios_base::binary);    
+//     fin.seekg(0,ios_base::end);
+//     size_t uSize = fin.tellg();
+//     fin.seekg(0);
 
-    char* t = new char[uSize];
-    fin.read(t,uSize);
+//     char* t = new char[uSize];
+//     fin.read(t,uSize);
 
-    return string(t);
-}
+//     return string(t);
+// }
 
-inline string GetByteString2()
-{
-    ifstream fin("../client_key.der",ios_base::in|ios_base::binary);
-    fin.seekg(0,ios_base::end);
-    size_t uSize = fin.tellg();
-    fin.seekg(0);
+// inline string GetByteString2()
+// {
+//     ifstream fin("../client_key.der",ios_base::in|ios_base::binary);
+//     fin.seekg(0,ios_base::end);
+//     size_t uSize = fin.tellg();
+//     fin.seekg(0);
 
-    char* t = new char[uSize];
-    fin.read(t,uSize);
+//     char* t = new char[uSize];
+//     fin.read(t,uSize);
 
-    return string(t);
-}
-////////////////////////////////////
+//     return string(t);
+// }
+// ////////////////////////////////////
 
 /*
 Создание клиента
@@ -93,7 +93,8 @@ inline UA_Client *InitClient()
 {
     UA_Client *client = UA_Client_new();               
     UA_ClientConfig *cc = UA_Client_getConfig(client); 
-    UA_ClientConfig_setDefault(cc);
+    UA_ClientConfig_setDefault(cc);  
+
     return client;
 }
 
@@ -331,5 +332,91 @@ inline void VariantToJson(json::value &value, UA_Variant variant)
         cout << "string" << endl;
         UA_String val = *(UA_String *)variant.data;
         value["value"] = json::value::string(UastrToCharArr(val));
+    }
+}
+
+inline void BrowsingVarsRecurce(UA_Client *client, UA_NodeId nodeid, int n)
+{
+    if(n > 2) return;
+    UA_BrowseRequest bReq;
+    UA_BrowseRequest_init(&bReq);
+    bReq.requestedMaxReferencesPerNode = 0;
+    bReq.nodesToBrowse = UA_BrowseDescription_new();
+    bReq.nodesToBrowseSize = 1;
+    bReq.nodesToBrowse[0].nodeId = nodeid; /* browse objects folder */
+    bReq.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL; /* return everything */
+    UA_BrowseResponse bResp = UA_Client_Service_browse(client, bReq);    
+    for(size_t i = 0; i < bResp.resultsSize; ++i) {
+        for(size_t j = 0; j < bResp.results[i].referencesSize; ++j) {
+            UA_ReferenceDescription *ref = &(bResp.results[i].references[j]);
+            if(ref->nodeId.nodeId.namespaceIndex == 0) continue;
+            if(ref->nodeId.nodeId.identifierType == UA_NODEIDTYPE_NUMERIC) {
+
+                for(int k = 0; k < n; k++)
+                    printf("-");
+
+                printf("%-9d %-25d %-25.*s %-25.*s\n", ref->nodeId.nodeId.namespaceIndex,
+                    ref->nodeId.nodeId.identifier.numeric, (int)ref->browseName.name.length,
+                    ref->browseName.name.data, (int)ref->displayName.text.length,
+                    ref->displayName.text.data);
+
+                BrowsingVarsRecurce(client, ref->nodeId.nodeId, n + 1);
+
+            } else if(ref->nodeId.nodeId.identifierType == UA_NODEIDTYPE_STRING) {
+
+                for(int k = 0; k < n; k++)
+                    printf("-");
+
+                printf("%-9d %-25.*s %-25.*s %-25.*s\n", ref->nodeId.nodeId.namespaceIndex,
+                    (int)ref->nodeId.nodeId.identifier.string.length,
+                    ref->nodeId.nodeId.identifier.string.data,
+                    (int)ref->browseName.name.length, ref->browseName.name.data,
+                    (int)ref->displayName.text.length, ref->displayName.text.data);
+
+                BrowsingVarsRecurce(client, ref->nodeId.nodeId, n + 1);                
+
+            }
+            /* TODO: distinguish further types */
+        }
+    }
+}
+
+inline void BrowsingVars(UA_Client *client)
+{
+    printf("Browsing nodes in objects folder:\n");
+    UA_BrowseRequest bReq;
+    UA_BrowseRequest_init(&bReq);
+    bReq.requestedMaxReferencesPerNode = 0;
+    bReq.nodesToBrowse = UA_BrowseDescription_new();
+    bReq.nodesToBrowseSize = 1;
+    bReq.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); /* browse objects folder */
+    bReq.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL; /* return everything */
+    UA_BrowseResponse bResp = UA_Client_Service_browse(client, bReq);
+    printf("%-9s %-16s %-16s %-16s\n", "NAMESPACE", "NODEID", "BROWSE NAME", "DISPLAY NAME");
+    for(size_t i = 0; i < bResp.resultsSize; ++i) {
+        for(size_t j = 0; j < bResp.results[i].referencesSize; ++j) {
+            UA_ReferenceDescription *ref = &(bResp.results[i].references[j]);
+            if(ref->nodeId.nodeId.identifierType == UA_NODEIDTYPE_NUMERIC) {
+                printf("%-9d %-16d %-16.*s %-16.*s\n", ref->nodeId.nodeId.namespaceIndex,
+                    ref->nodeId.nodeId.identifier.numeric, (int)ref->browseName.name.length,
+                    ref->browseName.name.data, (int)ref->displayName.text.length,
+                    ref->displayName.text.data);
+
+                if(ref->nodeId.nodeId.namespaceIndex == 3 || ref->nodeId.nodeId.namespaceIndex == 4)
+                    BrowsingVarsRecurce(client, ref->nodeId.nodeId, 1);
+
+
+            } else if(ref->nodeId.nodeId.identifierType == UA_NODEIDTYPE_STRING) { 
+                printf("%-9d %-16.*s %-16.*s %-16.*s\n", ref->nodeId.nodeId.namespaceIndex,
+                    (int)ref->nodeId.nodeId.identifier.string.length,
+                    ref->nodeId.nodeId.identifier.string.data,
+                    (int)ref->browseName.name.length, ref->browseName.name.data,
+                    (int)ref->displayName.text.length, ref->displayName.text.data);
+
+                if(ref->nodeId.nodeId.namespaceIndex == 3 || ref->nodeId.nodeId.namespaceIndex == 4)
+                    BrowsingVarsRecurce(client, ref->nodeId.nodeId, 1);
+            }
+            /* TODO: distinguish further types */
+        }
     }
 }
