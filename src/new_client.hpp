@@ -314,31 +314,79 @@ inline char *UastrToCharArr(UA_String uastr)
 inline void VariantToJson(json::value &value, UA_Variant variant)
 {
     if(variant.type == &UA_TYPES[UA_TYPES_DOUBLE]){
-        cout << "double" << endl;
         UA_Double val = *(UA_Double *)variant.data;        
         value["value"] = json::value::number(val);
     }
     if(variant.type == &UA_TYPES[UA_TYPES_INT32]){
-        cout << "int" << endl;
         UA_Int32 val = *(UA_Int32 *)variant.data;
         value["value"] = json::value::number(val);
     }
     if(variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]){
-        cout << "bool" << endl;
         UA_Boolean val = *(UA_Boolean *)variant.data;
         value["value"] = json::value::boolean(val);
     }
     if(variant.type == &UA_TYPES[UA_TYPES_STRING]){
-        cout << "string" << endl;
         UA_String val = *(UA_String *)variant.data;
         value["value"] = json::value::string(UastrToCharArr(val));
     }
 }
 
-inline void BrowsingVarsRecurce(UA_Client *client, UA_NodeId nodeid, int n)
+/*
+Запись UA_Variant в json
+*/
+inline void PrintVariant(UA_Variant variant)
 {
-    if(n > 2) return;
+    if(variant.type == &UA_TYPES[UA_TYPES_DOUBLE]){
+        UA_Double val = *(UA_Double *)variant.data;        
+        printf("%f", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_INT16]){
+        UA_Int16 val = *(UA_Int16 *)variant.data;
+        printf("%d", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_UINT16]){
+        UA_UInt16 val = *(UA_UInt16 *)variant.data;
+        printf("%d", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_INT32]){
+        UA_Int32 val = *(UA_Int32 *)variant.data;
+        printf("%d", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_UINT32]){
+        UA_UInt32 val = *(UA_UInt32 *)variant.data;
+        printf("%d", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_INT64]){
+        UA_Int64 val = *(UA_Int64 *)variant.data;
+        printf("%ld", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_UINT64]){
+        UA_UInt64 val = *(UA_UInt64 *)variant.data;
+        printf("%lu", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_BYTE]){
+        UA_Byte val = *(UA_Byte *)variant.data;
+        printf("%d", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_SBYTE]){
+        UA_SByte val = *(UA_SByte *)variant.data;
+        printf("%d", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_BOOLEAN]){
+        UA_Boolean val = *(UA_Boolean *)variant.data;
+        printf("%d", val);
+    }
+    if(variant.type == &UA_TYPES[UA_TYPES_STRING]){
+        UA_String val = *(UA_String *)variant.data;
+        printf("%.*s", (int)val.length, val.data);
+    }
+}
+
+inline void BrowsingVarsRecursion(UA_Client *client, UA_NodeId nodeid, int n)
+{
+    if(n > 1) return;
     UA_BrowseRequest bReq;
+    UA_Variant value;
     UA_BrowseRequest_init(&bReq);
     bReq.requestedMaxReferencesPerNode = 0;
     bReq.nodesToBrowse = UA_BrowseDescription_new();
@@ -350,30 +398,32 @@ inline void BrowsingVarsRecurce(UA_Client *client, UA_NodeId nodeid, int n)
         for(size_t j = 0; j < bResp.results[i].referencesSize; ++j) {
             UA_ReferenceDescription *ref = &(bResp.results[i].references[j]);
             if(ref->nodeId.nodeId.namespaceIndex == 0) continue;
+            UA_Client_readValueAttribute(client, ref->nodeId.nodeId, &value);
             if(ref->nodeId.nodeId.identifierType == UA_NODEIDTYPE_NUMERIC) {
-
                 for(int k = 0; k < n; k++)
                     printf("-");
 
-                printf("%-9d %-25d %-25.*s %-25.*s\n", ref->nodeId.nodeId.namespaceIndex,
+                printf("%-9d %-25d %-25.*s %-25.*s", ref->nodeId.nodeId.namespaceIndex,
                     ref->nodeId.nodeId.identifier.numeric, (int)ref->browseName.name.length,
                     ref->browseName.name.data, (int)ref->displayName.text.length,
                     ref->displayName.text.data);
+                PrintVariant(value); printf("\n");
 
-                BrowsingVarsRecurce(client, ref->nodeId.nodeId, n + 1);
+                BrowsingVarsRecursion(client, ref->nodeId.nodeId, n + 1);
 
             } else if(ref->nodeId.nodeId.identifierType == UA_NODEIDTYPE_STRING) {
 
                 for(int k = 0; k < n; k++)
                     printf("-");
 
-                printf("%-9d %-25.*s %-25.*s %-25.*s\n", ref->nodeId.nodeId.namespaceIndex,
+                printf("%-9d %-25.*s %-25.*s %-25.*s", ref->nodeId.nodeId.namespaceIndex,
                     (int)ref->nodeId.nodeId.identifier.string.length,
                     ref->nodeId.nodeId.identifier.string.data,
                     (int)ref->browseName.name.length, ref->browseName.name.data,
                     (int)ref->displayName.text.length, ref->displayName.text.data);
+                PrintVariant(value); printf("\n");
 
-                BrowsingVarsRecurce(client, ref->nodeId.nodeId, n + 1);                
+                BrowsingVarsRecursion(client, ref->nodeId.nodeId, n + 1);                
 
             }
             /* TODO: distinguish further types */
@@ -392,7 +442,7 @@ inline void BrowsingVars(UA_Client *client)
     bReq.nodesToBrowse[0].nodeId = UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER); /* browse objects folder */
     bReq.nodesToBrowse[0].resultMask = UA_BROWSERESULTMASK_ALL; /* return everything */
     UA_BrowseResponse bResp = UA_Client_Service_browse(client, bReq);
-    printf("%-9s %-16s %-16s %-16s\n", "NAMESPACE", "NODEID", "BROWSE NAME", "DISPLAY NAME");
+    printf("%-9s %-16s %-16s %-16s %-16s\n", "NAMESPACE", "NODEID", "BROWSE NAME", "DISPLAY NAME", "VALUE");
     for(size_t i = 0; i < bResp.resultsSize; ++i) {
         for(size_t j = 0; j < bResp.results[i].referencesSize; ++j) {
             UA_ReferenceDescription *ref = &(bResp.results[i].references[j]);
@@ -402,8 +452,8 @@ inline void BrowsingVars(UA_Client *client)
                     ref->browseName.name.data, (int)ref->displayName.text.length,
                     ref->displayName.text.data);
 
-                if(ref->nodeId.nodeId.namespaceIndex == 3 || ref->nodeId.nodeId.namespaceIndex == 4)
-                    BrowsingVarsRecurce(client, ref->nodeId.nodeId, 1);
+                if(ref->nodeId.nodeId.namespaceIndex == 3 || ref->nodeId.nodeId.namespaceIndex == 2)
+                    BrowsingVarsRecursion(client, ref->nodeId.nodeId, 1);
 
 
             } else if(ref->nodeId.nodeId.identifierType == UA_NODEIDTYPE_STRING) { 
@@ -413,8 +463,8 @@ inline void BrowsingVars(UA_Client *client)
                     (int)ref->browseName.name.length, ref->browseName.name.data,
                     (int)ref->displayName.text.length, ref->displayName.text.data);
 
-                if(ref->nodeId.nodeId.namespaceIndex == 3 || ref->nodeId.nodeId.namespaceIndex == 4)
-                    BrowsingVarsRecurce(client, ref->nodeId.nodeId, 1);
+                if(ref->nodeId.nodeId.namespaceIndex == 3 || ref->nodeId.nodeId.namespaceIndex == 2)
+                    BrowsingVarsRecursion(client, ref->nodeId.nodeId, 1);
             }
             /* TODO: distinguish further types */
         }
