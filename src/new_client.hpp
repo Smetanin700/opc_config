@@ -22,7 +22,7 @@ using namespace web::json;
 UA_Boolean running = true;
 UA_StatusCode retval = UA_STATUSCODE_BAD;
 
-char *clientJson = "../configs/client_test.json";
+char *clientJson = "../configs/client_https.json";
 char *variableJson = "../configs/variable_test.json";
 
 typedef enum
@@ -101,7 +101,7 @@ inline UA_Client *InitClient()
 /*
 Создание защищенного клиента
 */
-inline UA_Client *InitSecureClient()
+inline UA_Client *InitSecureClient(string secMode, string secPolicy)
 {
     ifstream fin("../client_cert.der",ios_base::in|ios_base::binary);    
     fin.seekg(0,ios_base::end);
@@ -118,13 +118,20 @@ inline UA_Client *InitSecureClient()
 
     UA_ClientConfig* cc = UA_Client_getConfig(client);
 
+    string basePolicy = "http://opcfoundation.org/UA/SecurityPolicy#";
+
     // Set to default config with no trust and issuer list
     UA_ClientConfig_setDefaultEncryption(cc, cert, key, NULL, 0, NULL, 0);
 
     // Set securityMode and securityPolicyUri
     UA_ByteString_clear(&cc->securityPolicyUri);
-    cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
-    cc->securityPolicyUri = UA_String_fromChars("http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256");
+    if(secMode == "None")
+        cc->securityMode = UA_MESSAGESECURITYMODE_NONE;
+    else if(secMode == "Sign")
+        cc->securityMode = UA_MESSAGESECURITYMODE_SIGN;
+    else if(secMode == "SignAndEncrypt")
+        cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
+    cc->securityPolicyUri = UA_String_fromChars((basePolicy + secPolicy).c_str());
 
     // Set uri and client type
     UA_ApplicationDescription_clear(&cc->clientDescription);

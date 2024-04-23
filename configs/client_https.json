@@ -1,0 +1,1 @@
+{ "settings":{"address":"https://opcua.demo-this.com","port":"51212","endpoint":"","login":"test","password":"test","securityPolicy":"Basic256Sha256","messageSecurity":"SignAndEncrypt"}}
