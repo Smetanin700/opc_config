@@ -10,8 +10,8 @@ int main()
     ifstream fv(variableJson);
 	json::value variables = json::value::parse(fv)["variables"];
 	
-    // UA_Client *client = InitClient();
-    UA_Client *client = InitSecureClient(settings["messageSecurity"].as_string(), settings["securityPolicy"].as_string());
+    UA_Client *client = InitClient();
+    //UA_Client *client = InitSecureClient(settings["messageSecurity"].as_string(), settings["securityPolicy"].as_string());
     
     json::value varOut;
 

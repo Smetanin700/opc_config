@@ -1,1 +1,1 @@
-{ "settings":{"address":"opc.tcp://192.168.1.163","port":"62640","endpoint":"/IntegrationObjects/ServerSimulator","login":"test","password":"test","securityPolicy":"Basic256Sha256","messageSecurity":"SignAndEncrypt"}}
+{ "settings":{"address":"opc.tcp://192.168.1.163","port":"62640","endpoint":"","login":"test","password":"test","securityPolicy":"None","messageSecurity":"None"}}

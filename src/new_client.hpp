@@ -22,7 +22,7 @@ using namespace web::json;
 UA_Boolean running = true;
 UA_StatusCode retval = UA_STATUSCODE_BAD;
 
-char *clientJson = "../configs/client_https.json";
+char *clientJson = "../configs/client_test.json";
 char *variableJson = "../configs/variable_test.json";
 
 typedef enum
