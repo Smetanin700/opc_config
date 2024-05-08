@@ -16,7 +16,7 @@ int main()
     json::value varOut;
 
     retval = UA_STATUSCODE_BAD;
-    while (retval != UA_STATUSCODE_GOOD)
+    //while (retval != UA_STATUSCODE_GOOD)
     {
         if (!running) return -1;
         retval = UA_Client_connectUsername(client,

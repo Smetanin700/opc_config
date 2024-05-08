@@ -103,7 +103,7 @@ inline UA_Client *InitClient()
 */
 inline UA_Client *InitSecureClient(string secMode, string secPolicy)
 {
-    ifstream fin("../client_cert.der",ios_base::in|ios_base::binary);    
+    ifstream fin("../uaexpert.der",ios_base::in|ios_base::binary);    
     fin.seekg(0,ios_base::end);
     size_t uSize = fin.tellg();
     fin.seekg(0);
@@ -112,7 +112,7 @@ inline UA_Client *InitSecureClient(string secMode, string secPolicy)
     fin.read(t,uSize);
 
     UA_ByteString cert =  loadCert(t, uSize);
-    UA_ByteString key = loadFile("../client_key.der");  
+    UA_ByteString key = loadFile("../uaexpert_key.pem");  
 
     UA_Client *client = UA_Client_new();
 
@@ -136,7 +136,7 @@ inline UA_Client *InitSecureClient(string secMode, string secPolicy)
     // Set uri and client type
     UA_ApplicationDescription_clear(&cc->clientDescription);
     UA_String_clear(&cc->clientDescription.applicationUri);
-    cc->clientDescription.applicationUri = UA_STRING_ALLOC("urn:OpcPlc:f9f52d460f6a");
+    cc->clientDescription.applicationUri = UA_STRING_ALLOC("urn:DESKTOP-P1QNPM6:UnifiedAutomation:UaExpert");
     cc->clientDescription.applicationType = UA_APPLICATIONTYPE_CLIENT;
 
     return client;
